@@ -12,23 +12,22 @@ function initializeAdminApp() {
 
     try {
         // Initialize Firebase Admin SDK
+        // This will only succeed if serviceAccountKey.json is present and valid.
         const app = admin.initializeApp({
             credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
             projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         });
         return app;
     } catch (error: any) {
-        if (error.code === 'app/duplicate-app') {
-            return admin.app();
-        }
-        console.error('Firebase Admin initialization error:', error);
-        // We throw here because seeding cannot proceed without the admin app.
-        // The page will catch this and display a generic error.
-        throw new Error("Firebase Admin SDK could not be initialized. Please check your service account credentials.");
+        // If the service account key is missing or invalid, initialization will fail.
+        // We catch this error and return null so the app doesn't crash.
+        // Seeding will be skipped, and the user will see the setup guide instead.
+        console.warn('Firebase Admin initialization failed. Automatic seeding will be skipped. This is expected if `serviceAccountKey.json` is not provided. Error:', error.message);
+        return null;
     }
 }
 
-// Sample Data, same as the original seed script
+// Sample Data for automatic seeding
 const users: Omit<User, 'id'>[] = [
   { name: 'Current Leader', role: 'leader', hasDsc: false },
   { name: 'Leader Two', role: 'leader', hasDsc: true },
@@ -58,7 +57,7 @@ const dscs: Omit<DSC, 'id' | 'expiryDate' | 'currentHolderId'>[] = [
 export async function ensureDatabaseSeeded() {
     const adminApp = initializeAdminApp();
     if (!adminApp) {
-        console.log("Admin app not initialized, skipping seed check.");
+        console.log("Admin app not initialized, skipping automatic seeding.");
         return;
     }
 
@@ -83,7 +82,7 @@ export async function ensureDatabaseSeeded() {
         if (dscDocs.empty) {
             console.log('DSCs collection is empty. Seeding DSCs...');
             const dscsBatch = db.batch();
-            const allUsers = await usersCollection.get(); // Re-fetch users to get IDs
+            const allUsers = await usersCollection.get();
             const userMap = new Map(allUsers.docs.map(doc => [doc.data().name, doc.id]));
 
             for (const dscData of dscs) {
@@ -104,7 +103,7 @@ export async function ensureDatabaseSeeded() {
         }
     } catch (error) {
         console.error('Error during automatic database seeding:', error);
-        // Don't re-throw the error, as the page will catch its own fetch errors.
-        // This function is best-effort.
+        // We do not re-throw the error, to prevent crashing the page.
+        // The page will handle displaying a setup guide or other errors.
     }
 }

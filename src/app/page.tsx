@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle } from 'lucide-react';
 import { ensureDatabaseSeeded } from '@/services/seed';
+import SetupGuide from '@/components/setup-guide';
 
 function DashboardSkeleton() {
   return (
@@ -21,7 +22,7 @@ function DashboardSkeleton() {
 
 function ErrorDisplay({ message }: { message: string }) {
   return (
-    <div className="flex h-full items-center justify-center">
+    <div className="flex h-full items-center justify-center p-4">
       <Card className="max-w-lg border-destructive">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
@@ -37,7 +38,7 @@ function ErrorDisplay({ message }: { message: string }) {
             {message}
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
-            Please check your Firebase setup, including your <strong>.env</strong> and <strong>serviceAccountKey.json</strong> file, and
+            Please check your Firebase project setup, including your <strong>.env</strong> file and
             Firestore security rules. Your rules may be too restrictive. For
             development, you can temporarily allow all reads and writes.
           </p>
@@ -50,15 +51,23 @@ function ErrorDisplay({ message }: { message: string }) {
 
 async function DashboardData() {
   try {
-    // This will create the collections and add sample data if the DB is empty.
+    // This will attempt to create the collections and add sample data if the DB is empty
+    // and a service account key is provided. It will not crash if it fails.
     await ensureDatabaseSeeded();
 
-    const leaders = await getUsers('leader');
-    const employees = await getUsers('employee');
-    const dscs = await getDscs();
+    const [leaders, employees, dscs] = await Promise.all([
+      getUsers('leader'),
+      getUsers('employee'),
+      getDscs()
+    ]);
+    
+    // If the database is still empty after the seed attempt, show the setup guide.
+    if (leaders.length === 0 && employees.length === 0) {
+      return <SetupGuide />;
+    }
     
     // In a real app, you'd get this from an auth provider
-    const loggedInUser: User = { id: 'L1', name: 'Current Leader', role: 'leader', hasDsc: false };
+    const loggedInUser: User = leaders.find(l => l.name === 'Current Leader') || leaders[0] || { id: 'L1', name: 'Current Leader', role: 'leader', hasDsc: false };
 
     return (
       <DashboardClient
