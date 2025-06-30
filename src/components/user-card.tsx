@@ -18,8 +18,7 @@ export function UserCard({ user, isHighlighted = false }: UserCardProps) {
     <Card
       className={cn(
         'transition-all duration-300',
-        isHighlighted && 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-background',
-        'bg-card/50'
+        isHighlighted && 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-background'
       )}
     >
       <CardContent className="flex items-center gap-3 p-3">

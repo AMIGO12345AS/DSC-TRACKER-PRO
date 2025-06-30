@@ -18,7 +18,7 @@ export function Header() {
   const isLeader = true; // Mocked for display
   
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="container flex h-16 items-center">
         <div className="mr-4 flex items-center">
           <KeyIcon className="h-6 w-6 text-primary" />

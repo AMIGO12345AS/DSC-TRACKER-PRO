@@ -5,43 +5,38 @@
 body {
   font-family: 'Inter', sans-serif;
   background-color: hsl(var(--background));
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(231, 48%, 48%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, hsla(88, 50%, 53%, 0.1) 0px, transparent 50%);
 }
 
 @layer base {
   :root {
-    /* Light Theme with Glassmorphic feel */
-    --background: 220 40% 98%; /* Lighter, slightly blueish white */
-    --foreground: 222 84% 4.9%; /* Dark blue for text */
+    /* Modern Light Theme */
+    --background: 210 40% 98%;
+    --foreground: 215 28% 17%;
     
-    /* For glassmorphic cards, the background color will have alpha transparency, 
-       and we'll use backdrop-blur. The variable just defines the color part. */
-    --card: 220 40% 100%; /* White base for cards */
-    --card-foreground: 222 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
     
-    --popover: 220 40% 100%;
-    --popover-foreground: 222 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
 
-    --primary: 231 48% 48%; /* #3F51B5 */
+    --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 84% 4.9%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 88 50% 53%; /* #8BC34A */
-    --accent-foreground: 222 84% 4.9%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 221 83% 53%;
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -49,36 +44,36 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     
-    --radius: 0.75rem; /* Slightly more rounded corners for a softer look */
+    --radius: 0.5rem; /* Sharper corners for a modern look */
   }
 
   .dark {
     /* The user wants a light theme, so the dark theme will be the same. */
-    --background: 220 40% 98%; 
-    --foreground: 222 84% 4.9%;
-    --card: 220 40% 100%;
-    --card-foreground: 222 84% 4.9%;
-    --popover: 220 40% 100%;
-    --popover-foreground: 222 84% 4.9%;
-    --primary: 231 48% 48%;
+    --background: 210 40% 98%;
+    --foreground: 215 28% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+    --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 84% 4.9%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 88 50% 53%;
-    --accent-foreground: 222 84% 4.9%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 221 83% 53%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.75rem;
+    --radius: 0.5rem;
   }
 }
 
