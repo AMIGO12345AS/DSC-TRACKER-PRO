@@ -88,7 +88,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
             <CardTitle className="font-headline">Leader Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <LeaderActions />
+            <LeaderActions allUsers={allUsers} />
           </CardContent>
         </Card>
       )}

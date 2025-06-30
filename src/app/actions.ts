@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { addDsc as addDscToDb } from '@/services/dsc';
+import { addUser, updateUser, deleteUser } from '@/services/user';
 import { revalidatePath } from 'next/cache';
 
 const AddDscSchema = z.object({
@@ -58,4 +59,87 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
 
   revalidatePath('/');
   return { message: 'DSC added successfully.' };
+}
+
+
+// User Management Actions
+const UserSchema = z.object({
+  name: z.string().min(1, { message: "Name is required." }),
+  role: z.enum(['leader', 'employee'], { required_error: "Role is required." }),
+});
+
+type UserActionState = {
+  errors?: {
+    name?: string[];
+    role?: string[];
+  };
+  message?: string;
+};
+
+export async function addUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
+  const validatedFields = UserSchema.safeParse({
+    name: formData.get('name'),
+    role: formData.get('role'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to add user. Please check the fields.',
+    };
+  }
+
+  try {
+    await addUser(validatedFields.data);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { message: `Database Error: ${errorMessage}.` };
+  }
+
+  revalidatePath('/');
+  return { message: 'User added successfully.' };
+}
+
+export async function updateUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
+  const userId = formData.get('userId');
+  if (typeof userId !== 'string' || !userId) {
+      return { message: 'User ID is missing.' };
+  }
+
+  const validatedFields = UserSchema.safeParse({
+    name: formData.get('name'),
+    role: formData.get('role'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to update user. Please check the fields.',
+    };
+  }
+
+  try {
+    await updateUser(userId, validatedFields.data);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { message: `Database Error: ${errorMessage}.` };
+  }
+
+  revalidatePath('/');
+  return { message: 'User updated successfully.' };
+}
+
+
+export async function deleteUserAction(userId: string): Promise<{ message: string }> {
+    if (!userId) {
+        return { message: 'User ID is missing.' };
+    }
+    try {
+        await deleteUser(userId);
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { message: `Database Error: ${errorMessage}.` };
+    }
+    revalidatePath('/');
+    return { message: 'User deleted successfully.' };
 }

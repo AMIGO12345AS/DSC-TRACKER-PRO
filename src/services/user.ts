@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/firebase';
 import type { User } from '@/types';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -21,4 +21,26 @@ export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
     console.error("Error fetching users:", error);
     throw error;
   }
+}
+
+export async function addUser(user: Omit<User, 'id' | 'hasDsc'>) {
+  const usersCol = collection(db, 'users');
+  const newUser = {
+    ...user,
+    hasDsc: false, // New users don't have a DSC by default
+  };
+  const docRef = await addDoc(usersCol, newUser);
+  return docRef.id;
+}
+
+export async function updateUser(userId: string, userData: Partial<Pick<User, 'name' | 'role'>>) {
+  const userDoc = doc(db, 'users', userId);
+  await updateDoc(userDoc, userData);
+}
+
+export async function deleteUser(userId: string) {
+  // TODO: Add logic to check if user has a DSC assigned before deleting.
+  // For now, we will just delete the user.
+  const userDoc = doc(db, 'users', userId);
+  await deleteDoc(userDoc);
 }

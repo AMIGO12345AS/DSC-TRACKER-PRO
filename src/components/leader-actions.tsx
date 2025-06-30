@@ -20,6 +20,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect, useRef, useState, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Loader2 } from 'lucide-react';
+import { ManageUsersDialog } from './manage-users-dialog';
+import type { User } from '@/types';
+
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -31,7 +34,7 @@ function SubmitButton() {
   );
 }
 
-export function LeaderActions() {
+export function LeaderActions({ allUsers }: { allUsers: User[] }) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -129,17 +132,10 @@ export function LeaderActions() {
       </Dialog>
       
       {/* Manage Users Dialog */}
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button variant="secondary">Manage Users</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-headline">Manage Users</DialogTitle>
-          </DialogHeader>
-          <p>User management interface would be here.</p>
-        </DialogContent>
-      </Dialog>
+      <ManageUsersDialog 
+        users={allUsers}
+        trigger={<Button variant="secondary">Manage Users</Button>}
+      />
       
       {/* Generate Reports Dialog */}
       <Dialog>
