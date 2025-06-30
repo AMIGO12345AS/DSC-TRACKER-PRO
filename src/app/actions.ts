@@ -50,8 +50,9 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
     });
   } catch (error) {
     console.error(error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return {
-      message: 'Database Error: Failed to Add DSC.',
+      message: `Database Error: ${errorMessage}. Please ensure Firestore is set up correctly with read/write permissions.`,
     };
   }
 
