@@ -41,13 +41,14 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
       <main className="flex-1 p-4 lg:p-6">
         <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
           <div className="h-full min-h-[300px] lg:min-h-0">
-            <TopLeftQuadrant leaders={leaders} loggedInUser={loggedInUser} />
+            <TopLeftQuadrant leaders={leaders} loggedInUser={loggedInUser} allDscs={dscs} />
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">
             <TopRightQuadrant 
               dscs={dscsInStorage} 
               highlightedId={highlightedItem?.type === 'dsc' ? highlightedItem.id : null}
               onDscSelect={(dsc) => handleHighlight({type: 'dsc', id: dsc.location.mainBox.toString()})}
+              loggedInUser={loggedInUser}
             />
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">

@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { addDsc as addDscToDb } from '@/services/dsc';
+import { addDsc as addDscToDb, takeDsc, returnDsc } from '@/services/dsc';
 import { addUser, updateUser, deleteUser } from '@/services/user';
 import { revalidatePath } from 'next/cache';
 
@@ -142,4 +142,34 @@ export async function deleteUserAction(userId: string): Promise<{ message: strin
     }
     revalidatePath('/');
     return { message: 'User deleted successfully.' };
+}
+
+
+// Actions for Take/Return DSC
+export async function takeDscAction(dscId: string, userId: string): Promise<{ success: boolean; message: string }> {
+    if (!dscId || !userId) {
+        return { success: false, message: 'DSC ID and User ID are required.' };
+    }
+    try {
+        await takeDsc(dscId, userId);
+        revalidatePath('/');
+        return { success: true, message: 'DSC taken successfully.' };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Database Error: ${errorMessage}.` };
+    }
+}
+
+export async function returnDscAction(dscId: string, userId: string): Promise<{ success: boolean; message: string }> {
+    if (!dscId || !userId) {
+        return { success: false, message: 'DSC ID and User ID are required.' };
+    }
+    try {
+        await returnDsc(dscId, userId);
+        revalidatePath('/');
+        return { success: true, message: 'DSC returned successfully.' };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Database Error: ${errorMessage}.` };
+    }
 }

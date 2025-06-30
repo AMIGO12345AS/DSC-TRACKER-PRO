@@ -11,8 +11,11 @@ import { Button } from './ui/button';
 import { KeyIcon } from './icons';
 import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils';
-import type { DSC } from '@/types';
-import { useState } from 'react';
+import type { DSC, User } from '@/types';
+import { useState, useEffect } from 'react';
+import { takeDscAction } from '@/app/actions';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 interface SubBoxModalProps {
   isOpen: boolean;
@@ -20,20 +23,55 @@ interface SubBoxModalProps {
   mainBoxId: number | null;
   dscs: DSC[];
   onDscSelect: (dsc: DSC) => void;
+  loggedInUser: User;
 }
 
-export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect }: SubBoxModalProps) {
+export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, loggedInUser }: SubBoxModalProps) {
   const [selectedDsc, setSelectedDsc] = useState<DSC | null>(null);
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setTimeout(() => {
+        setSelectedDsc(null);
+      }, 200); 
+    }
+  }, [isOpen]);
 
   const handleDscClick = (dsc: DSC) => {
     setSelectedDsc(dsc);
     onDscSelect(dsc);
   };
   
-  const handleTakeDsc = () => {
-    // In a real app, this would trigger a database update.
-    console.log(`Taking DSC: ${selectedDsc?.id}`);
-    onClose();
+  const handleTakeDsc = async () => {
+    if (!selectedDsc || !loggedInUser) return;
+
+    if (selectedDsc.issuedTo !== loggedInUser.name) {
+      toast({
+        variant: 'destructive',
+        title: 'Permission Denied',
+        description: `This DSC is assigned to ${selectedDsc.issuedTo}, not you.`,
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    const result = await takeDscAction(selectedDsc.id, loggedInUser.id);
+    if (result.success) {
+      toast({
+        title: 'Success',
+        description: result.message,
+      });
+      onClose();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: result.message,
+      });
+    }
+    setIsSubmitting(false);
   }
 
   const subBoxes = Array.from({ length: 9 }, (_, i) => {
@@ -43,6 +81,8 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect }: S
   });
 
   if (!mainBoxId) return null;
+
+  const canTakeSelectedDsc = selectedDsc && selectedDsc.issuedTo === loggedInUser.name && !loggedInUser.hasDsc;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -80,7 +120,19 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect }: S
                     <h3 className="font-semibold">{selectedDsc.issuedTo}</h3>
                     <p className="text-sm text-muted-foreground">S/N: {selectedDsc.serialNumber}</p>
                     <p className="text-xs text-muted-foreground">Expires: {new Date(selectedDsc.expiryDate).toLocaleDateString()}</p>
-                    <Button className="mt-4 w-full" onClick={handleTakeDsc}>Take DSC</Button>
+                    <Button className="mt-4 w-full" onClick={handleTakeDsc} disabled={!canTakeSelectedDsc || isSubmitting}>
+                      {isSubmitting ? <Loader2 className="animate-spin" /> : 'Take DSC'}
+                    </Button>
+                    {!canTakeSelectedDsc && !isSubmitting && selectedDsc.issuedTo !== loggedInUser.name && (
+                        <p className="mt-2 text-xs text-destructive">
+                           This DSC is not assigned to you.
+                        </p>
+                    )}
+                     {!canTakeSelectedDsc && !isSubmitting && loggedInUser.hasDsc && (
+                        <p className="mt-2 text-xs text-destructive">
+                           You already hold a DSC.
+                        </p>
+                    )}
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">Select a DSC to see details.</p>

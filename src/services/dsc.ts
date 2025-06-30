@@ -1,7 +1,7 @@
 'use server';
 import { db } from '@/lib/firebase';
 import type { DSC } from '@/types';
-import { collection, getDocs, addDoc, Timestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, Timestamp, query, where, doc, runTransaction } from 'firebase/firestore';
 
 export async function getDscs(): Promise<DSC[]> {
   try {
@@ -54,4 +54,61 @@ export async function addDsc(dscData: AddDscData) {
 
     const docRef = await addDoc(dscsCol, newDsc);
     return docRef.id;
+}
+
+
+export async function takeDsc(dscId: string, userId: string) {
+    const dscRef = doc(db, 'dscs', dscId);
+    const userRef = doc(db, 'users', userId);
+
+    await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw new Error("User does not exist!");
+        }
+        if (userDoc.data().hasDsc) {
+            throw new Error("User already holds a DSC.");
+        }
+
+        const dscDoc = await transaction.get(dscRef);
+        if (!dscDoc.exists()) {
+            throw new Error("DSC does not exist!");
+        }
+        if (dscDoc.data().status !== 'storage') {
+            throw new Error("DSC is not in storage.");
+        }
+
+        transaction.update(dscRef, {
+            status: 'with-employee',
+            currentHolderId: userId
+        });
+        transaction.update(userRef, { hasDsc: true });
+    });
+}
+
+export async function returnDsc(dscId: string, userId: string) {
+    const dscRef = doc(db, 'dscs', dscId);
+    const userRef = doc(db, 'users', userId);
+
+    await runTransaction(db, async (transaction) => {
+        const dscDoc = await transaction.get(dscRef);
+        if (!dscDoc.exists()) {
+            throw new Error("DSC does not exist!");
+        }
+
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw new Error("User does not exist!");
+        }
+
+        if (dscDoc.data().currentHolderId !== userId) {
+            throw new Error("User does not hold this DSC.");
+        }
+
+        transaction.update(dscRef, {
+            status: 'storage',
+            currentHolderId: null
+        });
+        transaction.update(userRef, { hasDsc: false });
+    });
 }
