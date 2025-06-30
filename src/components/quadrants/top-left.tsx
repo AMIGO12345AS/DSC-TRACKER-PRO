@@ -81,7 +81,7 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
              <div className="text-center text-sm text-muted-foreground">
               {loggedInUser.hasDsc
                 ? 'Loading your DSC info...'
-                : 'You can take your assigned DSC from storage.'}
+                : 'You do not currently hold a DSC.'}
             </div>
           )}
         </CardContent>
