@@ -1,6 +1,7 @@
 'use server';
 import * as admin from 'firebase-admin';
 import type { User, DSC } from '@/types';
+import serviceAccount from '@/lib/serviceAccountKey.json';
 
 // This function should only be called once per server instance.
 function initializeAdminApp() {
@@ -11,10 +12,8 @@ function initializeAdminApp() {
 
     try {
         // Initialize Firebase Admin SDK
-        // GOOGLE_APPLICATION_CREDENTIALS should be set in your .env file
-        // pointing to your serviceAccountKey.json
         const app = admin.initializeApp({
-            credential: admin.credential.applicationDefault(),
+            credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
             projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         });
         return app;
