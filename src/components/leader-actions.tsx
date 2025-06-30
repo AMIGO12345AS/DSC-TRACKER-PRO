@@ -17,8 +17,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from './ui/badge';
 import { addDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useRef, useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useRef, useState, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 
 function SubmitButton() {
@@ -37,7 +37,7 @@ export function LeaderActions() {
   const formRef = useRef<HTMLFormElement>(null);
 
   const initialState = { message: undefined, errors: {} };
-  const [state, dispatch] = useFormState(addDscAction, initialState);
+  const [state, dispatch] = useActionState(addDscAction, initialState);
 
   const [dates, setDates] = useState({ d1: '', d2: '', d3: '' });
   useEffect(() => {
