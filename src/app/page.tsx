@@ -6,6 +6,7 @@ import DashboardClient from '@/components/dashboard-client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle } from 'lucide-react';
+import { ensureDatabaseSeeded } from '@/services/seed';
 
 function DashboardSkeleton() {
   return (
@@ -36,7 +37,7 @@ function ErrorDisplay({ message }: { message: string }) {
             {message}
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
-            Please check your Firebase setup, including your <strong>.env</strong> file and
+            Please check your Firebase setup, including your <strong>.env</strong> and <strong>serviceAccountKey.json</strong> file, and
             Firestore security rules. Your rules may be too restrictive. For
             development, you can temporarily allow all reads and writes.
           </p>
@@ -49,6 +50,9 @@ function ErrorDisplay({ message }: { message: string }) {
 
 async function DashboardData() {
   try {
+    // This will create the collections and add sample data if the DB is empty.
+    await ensureDatabaseSeeded();
+
     const leaders = await getUsers('leader');
     const employees = await getUsers('employee');
     const dscs = await getDscs();
@@ -80,3 +84,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
