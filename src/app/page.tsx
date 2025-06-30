@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { getDscs } from '@/services/dsc';
 import { getUsers } from '@/services/user';
-import { User } from '@/types';
 import DashboardClient from '@/components/dashboard-client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,11 +10,23 @@ import SetupGuide from '@/components/setup-guide';
 
 function DashboardSkeleton() {
   return (
-    <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
-      <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-      <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-      <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-      <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+    <div className="flex min-h-screen w-full flex-col">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center">
+            <Skeleton className="h-8 w-32" />
+          <div className="flex flex-1 items-center justify-end space-x-4">
+            <Skeleton className="h-10 w-10 rounded-full" />
+          </div>
+        </div>
+      </header>
+      <main className="flex-1 p-4 lg:p-6">
+        <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
+          <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+          <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+          <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+          <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+        </div>
+      </main>
     </div>
   )
 }
@@ -38,9 +49,8 @@ function ErrorDisplay({ message }: { message: string }) {
             {message}
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
-            Please check your Firebase project setup, including your <strong>.env</strong> file and
-            Firestore security rules. Your rules may be too restrictive. For
-            development, you can temporarily allow all reads and writes.
+            Please check your Firebase project setup, including your Firestore security rules. 
+            If your database is empty, the app may show a setup guide.
           </p>
         </CardContent>
       </Card>
@@ -55,26 +65,20 @@ async function DashboardData() {
     // and a service account key is provided. It will not crash if it fails.
     await ensureDatabaseSeeded();
 
-    const [leaders, employees, dscs] = await Promise.all([
-      getUsers('leader'),
-      getUsers('employee'),
+    const [users, dscs] = await Promise.all([
+      getUsers(),
       getDscs()
     ]);
     
     // If the database is still empty after the seed attempt, show the setup guide.
-    if (leaders.length === 0 && employees.length === 0) {
+    if (users.length === 0) {
       return <SetupGuide />;
     }
-    
-    // In a real app, you'd get this from an auth provider
-    const loggedInUser: User = leaders.find(l => l.name === 'Current Leader') || leaders[0] || { id: 'L1', name: 'Current Leader', role: 'leader', hasDsc: false };
 
     return (
       <DashboardClient
-        leaders={leaders}
-        employees={employees}
+        allUsers={users}
         dscs={dscs}
-        loggedInUser={loggedInUser}
       />
     );
   } catch (error) {
@@ -86,10 +90,8 @@ async function DashboardData() {
 
 export default function DashboardPage() {
   return (
-    <div className="h-full flex-1 p-4 lg:p-6">
-       <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardData />
-      </Suspense>
-    </div>
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardData />
+    </Suspense>
   );
 }

@@ -6,15 +6,15 @@ import TopRightQuadrant from '@/components/quadrants/top-right';
 import BottomLeftQuadrant from '@/components/quadrants/bottom-left';
 import BottomRightQuadrant from '@/components/quadrants/bottom-right';
 import type { DSC, User } from '@/types';
+import { Header } from './header';
 
 interface DashboardClientProps {
-    leaders: User[];
-    employees: User[];
+    allUsers: User[];
     dscs: DSC[];
-    loggedInUser: User;
 }
 
-export default function DashboardClient({ leaders, employees, dscs, loggedInUser }: DashboardClientProps) {
+export default function DashboardClient({ allUsers, dscs }: DashboardClientProps) {
+  const [loggedInUser, setLoggedInUser] = useState<User>(allUsers[0]);
   const [highlightedItem, setHighlightedItem] = useState<{
     type: 'dsc' | 'employee';
     id: string;
@@ -28,33 +28,44 @@ export default function DashboardClient({ leaders, employees, dscs, loggedInUser
   };
 
   const dscsInStorage = dscs.filter((dsc) => dsc.status === 'storage');
+  const leaders = allUsers.filter(user => user.role === 'leader');
+  const employees = allUsers.filter(user => user.role === 'employee');
   
   return (
-    <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
-      <div className="h-full min-h-[300px] lg:min-h-0">
-        <TopLeftQuadrant leaders={leaders} loggedInUser={loggedInUser} />
-      </div>
-      <div className="h-full min-h-[300px] lg:min-h-0">
-        <TopRightQuadrant 
-          dscs={dscsInStorage} 
-          highlightedId={highlightedItem?.type === 'dsc' ? highlightedItem.id : null}
-          onDscSelect={(dsc) => handleHighlight({type: 'dsc', id: dsc.location.mainBox.toString()})}
-        />
-      </div>
-      <div className="h-full min-h-[300px] lg:min-h-0">
-        <BottomLeftQuadrant 
-          employees={employees} 
-          highlightedId={highlightedItem?.type === 'employee' ? highlightedItem.id : null}
-        />
-      </div>
-      <div className="h-full min-h-[300px] lg:min-h-0">
-        <BottomRightQuadrant 
-          allDscs={dscs} 
-          allUsers={[...leaders, ...employees]} 
-          onHighlight={handleHighlight}
-          loggedInUser={loggedInUser}
-        />
-      </div>
+    <div className="flex min-h-screen w-full flex-col">
+      <Header 
+        allUsers={allUsers}
+        loggedInUser={loggedInUser}
+        onUserChange={setLoggedInUser}
+      />
+      <main className="flex-1 p-4 lg:p-6">
+        <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
+          <div className="h-full min-h-[300px] lg:min-h-0">
+            <TopLeftQuadrant leaders={leaders} loggedInUser={loggedInUser} />
+          </div>
+          <div className="h-full min-h-[300px] lg:min-h-0">
+            <TopRightQuadrant 
+              dscs={dscsInStorage} 
+              highlightedId={highlightedItem?.type === 'dsc' ? highlightedItem.id : null}
+              onDscSelect={(dsc) => handleHighlight({type: 'dsc', id: dsc.location.mainBox.toString()})}
+            />
+          </div>
+          <div className="h-full min-h-[300px] lg:min-h-0">
+            <BottomLeftQuadrant 
+              employees={employees} 
+              highlightedId={highlightedItem?.type === 'employee' ? highlightedItem.id : null}
+            />
+          </div>
+          <div className="h-full min-h-[300px] lg:min-h-0">
+            <BottomRightQuadrant 
+              allDscs={dscs} 
+              allUsers={allUsers} 
+              onHighlight={handleHighlight}
+              loggedInUser={loggedInUser}
+            />
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
