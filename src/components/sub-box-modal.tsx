@@ -46,15 +46,6 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
   
   const handleTakeDsc = async () => {
     if (!selectedDsc || !loggedInUser) return;
-
-    if (selectedDsc.issuedTo !== loggedInUser.name) {
-      toast({
-        variant: 'destructive',
-        title: 'Permission Denied',
-        description: `This DSC is assigned to ${selectedDsc.issuedTo}, not you.`,
-      });
-      return;
-    }
     
     setIsSubmitting(true);
     const result = await takeDscAction(selectedDsc.id, loggedInUser.id);
@@ -82,14 +73,14 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
 
   if (!mainBoxId) return null;
 
-  const canTakeSelectedDsc = selectedDsc && selectedDsc.issuedTo === loggedInUser.name && !loggedInUser.hasDsc;
+  const canTakeSelectedDsc = selectedDsc && !loggedInUser.hasDsc;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-headline">Main Box {mainBoxId}</DialogTitle>
-          <DialogDescription>Select a sub-box to view DSC details or take your assigned DSC.</DialogDescription>
+          <DialogDescription>Select a sub-box to view DSC details or take any available DSC.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="md:col-span-2">
@@ -123,11 +114,6 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
                     <Button className="mt-4 w-full" onClick={handleTakeDsc} disabled={!canTakeSelectedDsc || isSubmitting}>
                       {isSubmitting ? <Loader2 className="animate-spin" /> : 'Take DSC'}
                     </Button>
-                    {!canTakeSelectedDsc && !isSubmitting && selectedDsc.issuedTo !== loggedInUser.name && (
-                        <p className="mt-2 text-xs text-destructive">
-                           This DSC is not assigned to you.
-                        </p>
-                    )}
                      {!canTakeSelectedDsc && !isSubmitting && loggedInUser.hasDsc && (
                         <p className="mt-2 text-xs text-destructive">
                            You already hold a DSC.
