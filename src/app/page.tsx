@@ -25,17 +25,6 @@ async function DashboardData() {
   // In a real app, you'd get this from an auth provider
   const loggedInUser: User = { id: 'L1', name: 'Current Leader', role: 'leader', hasDsc: false };
 
-  if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "your-api-key") {
-     return (
-        <div className="flex h-full items-center justify-center p-4">
-            <Card className="p-8 text-center">
-                <h2 className="text-2xl font-bold mb-2">Firebase Not Configured</h2>
-                <p className="text-muted-foreground">Please update your Firebase configuration in the <code>.env</code> file to connect to your database.</p>
-            </Card>
-        </div>
-     )
-  }
-
   return (
     <DashboardClient
       leaders={leaders}
