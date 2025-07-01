@@ -18,6 +18,7 @@ import { takeDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
+import { useRouter } from 'next/navigation';
 
 interface SubBoxModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ interface SubBoxModalProps {
 }
 
 export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, loggedInUser }: SubBoxModalProps) {
+  const router = useRouter();
   const [selectedDsc, setSelectedDsc] = useState<DSC | null>(null);
   const [selectedSubBox, setSelectedSubBox] = useState<string | null>(null);
   const { toast } = useToast();
@@ -60,6 +62,7 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
         title: 'Success',
         description: result.message,
       });
+      router.refresh();
       onClose();
     } else {
       toast({

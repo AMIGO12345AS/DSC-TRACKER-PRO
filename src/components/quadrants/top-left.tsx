@@ -9,6 +9,7 @@ import { returnDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface TopLeftQuadrantProps {
   leaders: User[];
@@ -17,6 +18,7 @@ interface TopLeftQuadrantProps {
 }
 
 export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopLeftQuadrantProps) {
+  const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,6 +45,7 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
         title: 'Success',
         description: result.message,
       });
+      router.refresh();
     } else {
       toast({
         variant: 'destructive',
