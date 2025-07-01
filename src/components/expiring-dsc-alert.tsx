@@ -1,9 +1,10 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
 import type { DSC, User } from '@/types';
+import { Button } from '@/components/ui/button';
 
 interface ExpiringDscAlertProps {
   dscs: DSC[];
@@ -13,6 +14,8 @@ interface ExpiringDscAlertProps {
 const EXPIRY_THRESHOLD_DAYS = 30;
 
 export function ExpiringDscAlert({ dscs, user }: ExpiringDscAlertProps) {
+  const [isVisible, setIsVisible] = useState(true);
+
   const expiringDscs = useMemo(() => {
     if (user.role !== 'leader') {
       return [];
@@ -25,12 +28,12 @@ export function ExpiringDscAlert({ dscs, user }: ExpiringDscAlertProps) {
     });
   }, [dscs, user.role]);
 
-  if (expiringDscs.length === 0) {
+  if (expiringDscs.length === 0 || !isVisible) {
     return null;
   }
 
   return (
-    <Alert variant="destructive">
+    <Alert variant="destructive" className="relative pr-8">
       <AlertTriangle className="h-4 w-4" />
       <AlertTitle>Expiring DSCs Alert!</AlertTitle>
       <AlertDescription>
@@ -43,6 +46,15 @@ export function ExpiringDscAlert({ dscs, user }: ExpiringDscAlertProps) {
             ))}
         </ul>
       </AlertDescription>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-2 right-1 h-6 w-6 text-destructive hover:bg-destructive/10"
+        onClick={() => setIsVisible(false)}
+        aria-label="Close alert"
+      >
+        <X className="h-4 w-4" />
+      </Button>
     </Alert>
   );
 }
