@@ -24,13 +24,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Use onIdTokenChanged for better cookie synchronization. It fires on sign-in,
-    // sign-out, and token refresh.
+    // onIdTokenChanged is the best listener for auth state. It fires on:
+    // 1. Sign-in
+    // 2. Sign-out
+    // 3. Token refresh
+    // This ensures the cookie is always kept up-to-date for the middleware.
     const unsubscribeAuth = onIdTokenChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        // When a user is authenticated, get their token and set the cookie.
+        // When a user is authenticated, get their token and set/refresh the cookie.
         const token = await firebaseUser.getIdToken();
         document.cookie = `firebaseIdToken=${token}; path=/;`;
         
@@ -60,7 +63,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return () => unsubscribeProfile();
 
       } else {
-        // When user is signed out, clear their profile and the auth cookie.
+        // When user is signed out, clear their profile and ensure the cookie is removed.
         setUserProfile(null);
         document.cookie = 'firebaseIdToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         setLoading(false);

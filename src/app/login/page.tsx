@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,14 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Explicitly set the cookie immediately on successful login.
+      // This solves the race condition where the redirect happens before
+      // the AuthProvider's listener can set the cookie.
+      const token = await userCredential.user.getIdToken();
+      document.cookie = `firebaseIdToken=${token}; path=/;`;
+
       router.push('/');
     } catch (err: any) {
       let errorMessage = 'Failed to log in. Please check your credentials.';
