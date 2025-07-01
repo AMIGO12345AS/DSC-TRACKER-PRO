@@ -26,8 +26,8 @@ export function Header() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    // Clear cookie for middleware
-    document.cookie = 'firebaseIdToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    // The onIdTokenChanged listener in AuthProvider will handle cookie clearing.
+    // We just need to navigate the user to the login page.
     router.push('/login');
   };
 

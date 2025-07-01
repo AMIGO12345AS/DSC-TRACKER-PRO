@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { onIdTokenChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { User as UserProfile } from '@/types';
@@ -24,11 +24,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    // Use onIdTokenChanged for better cookie synchronization. It fires on sign-in,
+    // sign-out, and token refresh.
+    const unsubscribeAuth = onIdTokenChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+
       if (firebaseUser) {
-        // Since the user document ID now matches the Firebase Auth UID,
-        // we can do a direct document lookup instead of a query. This is more efficient.
+        // When a user is authenticated, get their token and set the cookie.
+        const token = await firebaseUser.getIdToken();
+        document.cookie = `firebaseIdToken=${token}; path=/;`;
+        
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         
         const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
@@ -55,29 +60,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return () => unsubscribeProfile();
 
       } else {
+        // When user is signed out, clear their profile and the auth cookie.
         setUserProfile(null);
+        document.cookie = 'firebaseIdToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         setLoading(false);
       }
     });
 
-    // Set cookie for middleware
-    const setToken = async () => {
-        const currentUser = auth.currentUser;
-        if(currentUser) {
-            const token = await currentUser.getIdToken();
-            document.cookie = `firebaseIdToken=${token}; path=/;`;
-        } else {
-            document.cookie = 'firebaseIdToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        }
-    }
-    
-    const tokenRefreshInterval = setInterval(setToken, 10 * 60 * 1000); // Refresh every 10 mins
-    setToken();
-
-
     return () => {
       unsubscribeAuth();
-      clearInterval(tokenRefreshInterval);
     }
   }, []);
 
