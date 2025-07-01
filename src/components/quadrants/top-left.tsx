@@ -60,7 +60,7 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
           <CardTitle className="font-headline">Leadership</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="flex flex-wrap gap-3">
             {leaders.map((leader) => (
               <UserCard key={leader.id} user={leader} />
             ))}
@@ -71,9 +71,9 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
         <CardHeader>
           <CardTitle className="font-headline">My DSC</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex justify-center p-6">
           {myDsc ? (
-            <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex w-full items-center justify-between rounded-lg border p-4">
               <div className="flex items-center gap-3">
                 <KeyIcon className="h-6 w-6 text-primary" />
                 <div>
@@ -87,7 +87,7 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
               </Button>
             </div>
           ) : (
-             <div className="text-center text-sm text-muted-foreground">
+             <div className="text-sm text-muted-foreground">
               {loggedInUser.hasDsc
                 ? 'Loading your DSC info...'
                 : 'You do not currently hold a DSC.'}

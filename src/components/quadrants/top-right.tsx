@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SubBoxModal } from '../sub-box-modal';
 import type { DSC, User } from '@/types';
 import { cn } from '@/lib/utils';
-import { Box } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 
 interface TopRightQuadrantProps {
   dscs: DSC[];
@@ -47,7 +47,7 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, log
                 )}
                 onClick={() => setSelectedMainBox(box.id)}
               >
-                <Box className="h-8 w-8 text-primary" />
+                <KeyRound className="h-8 w-8 text-primary" />
                 <div className="text-center">
                   <span className="font-bold">Box {box.id}</span>
                   <p className="text-xs text-muted-foreground">{box.dscCount} DSCs</p>

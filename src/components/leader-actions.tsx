@@ -13,25 +13,25 @@ export function LeaderActions({ allUsers, loggedInUser }: { allUsers: User[], lo
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {/* Add New DSC Dialog */}
       <ManageDscDialog 
-        trigger={<Button>Add New DSC</Button>}
+        trigger={<Button className="w-full">Add New DSC</Button>}
         loggedInUser={loggedInUser}
       />
       
       {/* Manage Users Dialog */}
       <ManageUsersDialog 
         users={allUsers}
-        trigger={<Button variant="secondary">Manage Users</Button>}
+        trigger={<Button variant="secondary" className="w-full">Manage Users</Button>}
       />
       
       {/* Audit Log Dialog */}
       <AuditLogDialog 
-         trigger={<Button variant="secondary">Audit Log</Button>}
+         trigger={<Button variant="secondary" className="w-full">Audit Log</Button>}
       />
 
       {/* View all DSCs */}
       <AllDscsDialog
         allUsers={allUsers}
-        trigger={<Button variant="secondary">View All DSCs</Button>}
+        trigger={<Button variant="secondary" className="w-full">View All DSCs</Button>}
       />
     </div>
   );

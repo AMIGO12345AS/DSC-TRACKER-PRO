@@ -16,7 +16,7 @@ export default function BottomLeftQuadrant({ employees, highlightedId }: BottomL
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[250px] lg:h-[calc(100%-2rem)]">
-          <div className="grid grid-cols-2 gap-3 pr-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="flex flex-wrap gap-3 pr-4">
             {employees.map((employee) => (
               <UserCard
                 key={employee.id}

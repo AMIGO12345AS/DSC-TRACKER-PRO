@@ -19,7 +19,7 @@ export function UserCard({ user, isHighlighted = false }: UserCardProps) {
   return (
     <Card
       className={cn(
-        'transition-all duration-300',
+        'transition-all duration-300 min-w-48',
         isHighlighted && 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-background'
       )}
     >
