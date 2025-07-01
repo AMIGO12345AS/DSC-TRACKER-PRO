@@ -120,8 +120,8 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
                 ) : (
                     <>
                         <h3 className="font-semibold mb-2">Sub-box {selectedSubBox.toUpperCase()}</h3>
-                        <ScrollArea className="flex-grow">
-                            <div className="space-y-2 text-left">
+                        <ScrollArea className="h-[240px] flex-grow pr-3">
+                            <div className="space-y-1 text-left">
                                 {dscsInSelectedSubBox.map((dsc) => (
                                     <div
                                         key={dsc.id}
@@ -130,11 +130,11 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
                                           onDscSelect(dsc);
                                         }}
                                         className={cn(
-                                            "cursor-pointer rounded-md border p-2 hover:bg-secondary",
-                                            selectedDsc?.id === dsc.id && "ring-2 ring-primary"
+                                            "cursor-pointer rounded-md p-2 hover:bg-secondary",
+                                            selectedDsc?.id === dsc.id && "bg-secondary ring-2 ring-primary"
                                         )}
                                     >
-                                        <p className="text-sm font-medium">{dsc.description}</p>
+                                        <p className="text-sm font-medium truncate">{dsc.description}</p>
                                         <p className="text-xs text-muted-foreground">S/N: {dsc.serialNumber}</p>
                                     </div>
                                 ))}
