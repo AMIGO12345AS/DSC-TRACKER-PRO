@@ -6,7 +6,7 @@ import { addUser, updateUser, deleteUser } from '@/services/user';
 import { revalidatePath } from 'next/cache';
 
 const AddDscSchema = z.object({
-  issuedTo: z.string().min(1, { message: "Employee name is required." }),
+  description: z.string().min(1, { message: "Description is required." }),
   serialNumber: z.string().min(1, { message: "Serial number is required." }),
   expiryDate: z.string({required_error: "Expiry date is required."}).min(1, { message: "Expiry date is required." }),
   mainBox: z.coerce.number().min(1, "Main box must be between 1-8").max(8, "Main box must be between 1-8"),
@@ -15,7 +15,7 @@ const AddDscSchema = z.object({
 
 type ActionState = {
     errors?: {
-        issuedTo?: string[];
+        description?: string[];
         serialNumber?: string[];
         expiryDate?: string[];
         mainBox?: string[];
@@ -26,7 +26,7 @@ type ActionState = {
 
 export async function addDscAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const validatedFields = AddDscSchema.safeParse({
-    issuedTo: formData.get('employeeName'),
+    description: formData.get('description'),
     serialNumber: formData.get('serialNumber'),
     expiryDate: formData.get('expiryDate'),
     mainBox: formData.get('mainBox'),
@@ -40,12 +40,12 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
     };
   }
   
-  const { issuedTo, serialNumber, expiryDate, mainBox, subBox } = validatedFields.data;
+  const { description, serialNumber, expiryDate, mainBox, subBox } = validatedFields.data;
 
   try {
     await addDscToDb({
       serialNumber,
-      issuedTo,
+      description,
       expiryDate,
       location: { mainBox, subBox },
     });

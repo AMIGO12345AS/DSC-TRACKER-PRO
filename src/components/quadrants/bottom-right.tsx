@@ -23,15 +23,20 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
     if (!searchTerm) return [];
     const lowercasedTerm = searchTerm.toLowerCase();
     
-    const dscResults = allDscs.filter(dsc => 
-      dsc.serialNumber.toLowerCase().includes(lowercasedTerm) || 
-      dsc.issuedTo.toLowerCase().includes(lowercasedTerm)
-    );
+    const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+    const dscResults = allDscs
+      .map(dsc => {
+        const user = dsc.currentHolderId ? userMap.get(dsc.currentHolderId) : undefined;
+        return { ...dsc, user };
+      })
+      .filter(dsc => 
+        dsc.serialNumber.toLowerCase().includes(lowercasedTerm) || 
+        dsc.description.toLowerCase().includes(lowercasedTerm) ||
+        (dsc.user && dsc.user.name.toLowerCase().includes(lowercasedTerm))
+      );
     
-    return dscResults.map(dsc => {
-      const user = allUsers.find(u => u.name === dsc.issuedTo);
-      return { ...dsc, user };
-    });
+    return dscResults;
   }, [searchTerm, allDscs, allUsers]);
 
   const handleSelect = (dsc: (typeof searchResults)[0]) => {
@@ -53,7 +58,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Search by Employee or S/N..."
+              placeholder="Search by Description, S/N, or User..."
               className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -71,8 +76,8 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
                     >
                       <KeyIcon className="h-5 w-5 text-primary" />
                       <div>
-                        <p className="font-semibold">{dsc.issuedTo}</p>
-                        <p className="text-sm text-muted-foreground">{dsc.serialNumber} - {dsc.status === 'storage' ? `Box ${dsc.location.mainBox}` : 'With User'}</p>
+                        <p className="font-semibold">{dsc.description}</p>
+                        <p className="text-sm text-muted-foreground">{dsc.serialNumber} - {dsc.status === 'storage' ? `Box ${dsc.location.mainBox}` : `With ${dsc.user?.name || 'User'}`}</p>
                       </div>
                     </div>
                   ))}

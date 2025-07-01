@@ -8,7 +8,7 @@ export interface User {
 export interface DSC {
   id: string;
   serialNumber: string;
-  issuedTo: string;
+  description: string;
   expiryDate: string; // ISO string
   status: 'storage' | 'with-employee';
   location: {

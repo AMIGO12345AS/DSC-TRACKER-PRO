@@ -108,7 +108,7 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
               <CardContent className="flex h-full flex-col items-center justify-center p-4 text-center">
                 {selectedDsc ? (
                   <>
-                    <h3 className="font-semibold">{selectedDsc.issuedTo}</h3>
+                    <h3 className="font-semibold">{selectedDsc.description}</h3>
                     <p className="text-sm text-muted-foreground">S/N: {selectedDsc.serialNumber}</p>
                     <p className="text-xs text-muted-foreground">Expires: {new Date(selectedDsc.expiryDate).toLocaleDateString()}</p>
                     <Button className="mt-4 w-full" onClick={handleTakeDsc} disabled={!canTakeSelectedDsc || isSubmitting}>

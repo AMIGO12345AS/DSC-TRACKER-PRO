@@ -87,10 +87,10 @@ export function LeaderActions({ allUsers }: { allUsers: User[] }) {
             <div className="grid gap-4 py-4">
               <div className="space-y-1">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="employeeName" className="text-right">Employee</Label>
-                  <Input id="employeeName" name="employeeName" placeholder="Employee Name" className="col-span-3" />
+                  <Label htmlFor="description" className="text-right">Description</Label>
+                  <Input id="description" name="description" placeholder="e.g., Finance Dept Primary" className="col-span-3" />
                 </div>
-                {state?.errors?.issuedTo && <p className="col-start-2 col-span-3 text-right text-sm text-destructive">{state.errors.issuedTo.join(', ')}</p>}
+                {state?.errors?.description && <p className="col-start-2 col-span-3 text-right text-sm text-destructive">{state.errors.description.join(', ')}</p>}
               </div>
 
               <div className="space-y-1">

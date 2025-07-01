@@ -30,7 +30,7 @@ export async function getDscs(): Promise<DSC[]> {
 }
 
 // Omit DSC fields that are auto-generated or have defaults
-type AddDscData = Pick<DSC, 'serialNumber' | 'issuedTo'> & {
+type AddDscData = Pick<DSC, 'serialNumber' | 'description'> & {
   expiryDate: string; // The form will provide a string
   location: { mainBox: number, subBox: string };
 };

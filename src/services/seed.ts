@@ -47,15 +47,15 @@ const users: Omit<User, 'id'>[] = [
 ];
 
 const dscs: Omit<DSC, 'id' | 'expiryDate' | 'currentHolderId'>[] = [
-  { serialNumber: 'SN1001', issuedTo: 'Employee One', status: 'storage', location: { mainBox: 1, subBox: 'a' } },
-  { serialNumber: 'SN1002', issuedTo: 'Employee Three', status: 'storage', location: { mainBox: 1, subBox: 'b' } },
-  { serialNumber: 'SN1003', issuedTo: 'Employee Four', status: 'storage', location: { mainBox: 2, subBox: 'c' } },
-  { serialNumber: 'SN1004', issuedTo: 'Employee Five', status: 'storage', location: { mainBox: 3, subBox: 'd' } },
-  { serialNumber: 'SN1005', issuedTo: 'Leader Two', status: 'with-employee', location: { mainBox: 4, subBox: 'e' } },
-  { serialNumber: 'SN1006', issuedTo: 'Employee Two', status: 'with-employee', location: { mainBox: 5, subBox: 'f' } },
-  { serialNumber: 'SN1007', issuedTo: 'Employee Six', status: 'storage', location: { mainBox: 6, subBox: 'g' } },
-  { serialNumber: 'SN1008', issuedTo: 'Employee Seven', status: 'storage', location: { mainBox: 8, subBox: 'a' } },
-  { serialNumber: 'SN1009', issuedTo: 'Employee Eight', status: 'storage', location: { mainBox: 8, subBox: 'c' } },
+  { serialNumber: 'SN1001', description: 'DSC for Employee One', status: 'storage', location: { mainBox: 1, subBox: 'a' } },
+  { serialNumber: 'SN1002', description: 'DSC for Employee Three', status: 'storage', location: { mainBox: 1, subBox: 'b' } },
+  { serialNumber: 'SN1003', description: 'DSC for Employee Four', status: 'storage', location: { mainBox: 2, subBox: 'c' } },
+  { serialNumber: 'SN1004', description: 'DSC for Employee Five', status: 'storage', location: { mainBox: 3, subBox: 'd' } },
+  { serialNumber: 'SN1005', description: 'DSC for Leader Two', status: 'with-employee', location: { mainBox: 4, subBox: 'e' } },
+  { serialNumber: 'SN1006', description: 'DSC for Employee Two', status: 'with-employee', location: { mainBox: 5, subBox: 'f' } },
+  { serialNumber: 'SN1007', description: 'DSC for Employee Six', status: 'storage', location: { mainBox: 6, subBox: 'g' } },
+  { serialNumber: 'SN1008', description: 'DSC for Employee Seven', status: 'storage', location: { mainBox: 8, subBox: 'a' } },
+  { serialNumber: 'SN1009', description: 'DSC for Employee Eight', status: 'storage', location: { mainBox: 8, subBox: 'c' } },
 ];
 
 
@@ -95,10 +95,13 @@ export async function ensureDatabaseSeeded() {
                 const expiryDate = new Date();
                 expiryDate.setFullYear(expiryDate.getFullYear() + Math.ceil(Math.random() * 2));
                 
+                // A bit of a hack for seed data to match a user for DSCs that are 'with-employee'
+                const holderName = dscData.description.replace('DSC for ', '');
+
                 const completeDscData: any = {
                     ...dscData,
                     expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-                    currentHolderId: dscData.status === 'with-employee' ? userMap.get(dscData.issuedTo) || null : null,
+                    currentHolderId: dscData.status === 'with-employee' ? userMap.get(holderName) || null : null,
                 };
 
                 dscsBatch.set(docRef, completeDscData);
