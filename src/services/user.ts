@@ -25,6 +25,14 @@ export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
 
 export async function addUser(user: Omit<User, 'id' | 'hasDsc'>) {
   const usersCol = collection(db, 'users');
+
+  // Check if a user with the same name already exists
+  const q = query(usersCol, where("name", "==", user.name));
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    throw new Error(`A user with the name "${user.name}" already exists.`);
+  }
+
   const newUser = {
     ...user,
     hasDsc: false, // New users don't have a DSC by default
@@ -34,8 +42,18 @@ export async function addUser(user: Omit<User, 'id' | 'hasDsc'>) {
 }
 
 export async function updateUser(userId: string, userData: Partial<Pick<User, 'name' | 'role'>>) {
-  const userDoc = doc(db, 'users', userId);
-  await updateDoc(userDoc, userData);
+  const userDocRef = doc(db, 'users', userId);
+
+  // If name is being changed, check if the new name is already taken by another user
+  if (userData.name) {
+    const q = query(collection(db, 'users'), where("name", "==", userData.name));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty && querySnapshot.docs.some(d => d.id !== userId)) {
+      throw new Error(`Another user with the name "${userData.name}" already exists.`);
+    }
+  }
+
+  await updateDoc(userDocRef, userData);
 }
 
 export async function deleteUser(userId: string) {

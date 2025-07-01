@@ -510,6 +510,16 @@ async function processCsvImport(csvString: string) {
     if (!validatedUsers.success) {
         throw new Error(`Invalid user data in CSV: ${validatedUsers.error.errors[0].message}`);
     }
+    
+    // Pre-flight check for duplicate user names in the CSV file
+    const userNames = new Set<string>();
+    for (const user of validatedUsers.data) {
+        if (userNames.has(user.name)) {
+            throw new Error(`Duplicate user name found in CSV file: "${user.name}". User names must be unique.`);
+        }
+        userNames.add(user.name);
+    }
+
 
     // Validate DSCs
     const validatedDscs = z.array(CsvDscSchema).safeParse(dscsFromCsv);

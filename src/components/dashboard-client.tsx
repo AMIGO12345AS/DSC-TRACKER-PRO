@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import TopLeftQuadrant from '@/components/quadrants/top-left';
 import TopRightQuadrant from '@/components/quadrants/top-right';
 import BottomLeftQuadrant from '@/components/quadrants/bottom-left';
@@ -15,17 +15,27 @@ interface DashboardClientProps {
 }
 
 export default function DashboardClient({ allUsers, dscs }: DashboardClientProps) {
-  const [loggedInUser, setLoggedInUser] = useState<User | undefined>(allUsers.find(u => u.role === 'leader' && !u.hasDsc) || allUsers[0]);
+  const [loggedInUser, setLoggedInUser] = useState<User | undefined>(() => {
+    // Set initial user predictably: first leader, or first user if no leader exists.
+    const firstLeader = allUsers.find(u => u.role === 'leader');
+    return firstLeader || allUsers[0];
+  });
+  
   const [highlightedItem, setHighlightedItem] = useState<{
     type: 'dsc' | 'employee';
     id: string;
   } | null>(null);
 
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // This effect synchronizes the loggedInUser state with the fresh data
   // that is passed down as props after a server action revalidates the page.
   useEffect(() => {
     if (!loggedInUser) {
-        if (allUsers.length > 0) setLoggedInUser(allUsers.find(u => u.role === 'leader' && !u.hasDsc) || allUsers[0]);
+        if (allUsers.length > 0) {
+            const firstLeader = allUsers.find(u => u.role === 'leader');
+            setLoggedInUser(firstLeader || allUsers[0]);
+        }
         return;
     }
     
@@ -35,14 +45,33 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
       setLoggedInUser(freshUserData);
     } else if (!freshUserData && allUsers.length > 0) {
       // Handle case where the logged-in user might have been deleted
-      setLoggedInUser(allUsers[0]);
+      const firstLeader = allUsers.find(u => u.role === 'leader');
+      setLoggedInUser(firstLeader || allUsers[0]);
     }
   }, [allUsers, loggedInUser]);
+  
+  // Cleanup timeout on component unmount
+  useEffect(() => {
+    return () => {
+        if (highlightTimeoutRef.current) {
+            clearTimeout(highlightTimeoutRef.current);
+        }
+    }
+  }, []);
 
   const handleHighlight = (item: { type: 'dsc' | 'employee'; id: string } | null) => {
+    // Clear any existing highlight timeout
+    if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+    }
+
     setHighlightedItem(item);
+
     if (item) {
-      setTimeout(() => setHighlightedItem(null), 3000); // Highlight for 3 seconds
+      highlightTimeoutRef.current = setTimeout(() => {
+        setHighlightedItem(null);
+        highlightTimeoutRef.current = null;
+      }, 3000); // Highlight for 3 seconds
     }
   };
 
