@@ -2,12 +2,12 @@
 
 import { z } from 'zod';
 import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
-import { addUser, updateUser, deleteUser, getUsers, registerUser } from '@/services/user';
+import { addUser, updateUser, deleteUser, getUsers } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, query, runTransaction, Timestamp, writeBatch, documentId, limit } from 'firebase/firestore';
+import { collection, doc, getDocs, query, writeBatch, documentId, limit } from 'firebase/firestore';
 import Papa from 'papaparse';
 
 
@@ -388,7 +388,7 @@ const ImportedJsonDataSchema = z.object({
     id: z.string(),
     serialNumber: z.string(),
     description: z.string(),
-    expiryDate: z.string(), // ISO string
+    expiryDate: z.any(), // Can be string or have toDate method
     status: z.enum(['storage', 'with-employee']),
     location: z.object({
       mainBox: z.number(),
@@ -413,16 +413,35 @@ const CsvDscImportSchema = z.object({
   locationSubBox: z.string().optional().nullable(),
 });
 
-// Helper to delete all documents in a collection in batches
-async function deleteCollection(collectionPath: string, batch: writeBatch) {
+// Helper to delete all documents in a collection
+async function deleteCollection(collectionPath: string) {
     const collectionRef = collection(db, collectionPath);
-    const q = query(collectionRef);
+    const q = query(collectionRef, limit(50)); // Process in batches of 50
+    
+    return new Promise((resolve, reject) => {
+        deleteQueryBatch(q, resolve).catch(reject);
+    });
+}
+
+async function deleteQueryBatch(q: any, resolve: (value: unknown) => void) {
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) return;
-
-    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    if (snapshot.size === 0) {
+        return resolve(0);
+    }
+    
+    const batch = writeBatch(db);
+    snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+    
+    // Recurse on the same query to get the next batch.
+    process.nextTick(() => {
+        deleteQueryBatch(q, resolve);
+    });
 }
+
 
 // Action to import JSON backup, overwriting all existing data
 export async function importJsonBackupAction(jsonString: string): Promise<{ success: boolean; message: string; }> {
@@ -434,12 +453,12 @@ export async function importJsonBackupAction(jsonString: string): Promise<{ succ
             throw new Error('Invalid JSON file. Could not parse.');
         }
 
-        const validatedData = ImportedJsonDataSchema.safeParse(parsedData);
-        if (!validatedData.success) {
-            throw new Error(`Invalid data structure in JSON file. ${validatedData.error.message}`);
+        const validatedDataResult = ImportedJsonDataSchema.safeParse(parsedData);
+        if (!validatedDataResult.success) {
+            throw new Error(`Invalid data structure in JSON file. ${validatedDataResult.error.message}`);
         }
         
-        await processJsonImport(validatedData.data);
+        await processJsonImport(validatedDataResult.data);
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -452,16 +471,17 @@ export async function importJsonBackupAction(jsonString: string): Promise<{ succ
 
 async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
     const { users: importedUsers, dscs: importedDscs } = data;
+    
+    // This is highly destructive and should be used with caution.
+    // In a real app, you might want to handle this differently.
+    // For now, this assumes a full restore from a known-good state.
+    await Promise.all([
+        deleteCollection('dscs'),
+        deleteCollection('users'),
+        deleteCollection('auditLogs'),
+    ]);
 
     const writeDbBatch = writeBatch(db);
-
-    // This is highly destructive and should be used with caution.
-    // In a real app, you might want to handle this differently,
-    // e.g., by not deleting auth users.
-    // For now, this assumes a full restore from a known-good state.
-    await deleteCollection('dscs', writeDbBatch);
-    await deleteCollection('users', writeDbBatch);
-    await deleteCollection('auditLogs', writeDbBatch);
 
     // Batch write new users and create ID map
     const oldToNewUserIdMap = new Map<string, string>();
@@ -480,7 +500,7 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
 
         const newDscData: any = {
             ...dscData,
-            expiryDate: Timestamp.fromDate(new Date(expiryDate)),
+            expiryDate: new Date(expiryDate.seconds ? expiryDate.toDate() : expiryDate),
             currentHolderId: currentHolderId ? oldToNewUserIdMap.get(currentHolderId) || null : null,
         };
         writeDbBatch.set(newDscRef, newDscData);
@@ -495,11 +515,11 @@ export async function importUsersFromCsvAction(csvString: string): Promise<{ suc
         const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
         if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
 
-        const validatedUsers = z.array(CsvUserImportSchema).safeParse(parsedCsv.data);
-        if (!validatedUsers.success) throw new Error(`Invalid user data in CSV: ${validatedUsers.error.errors[0].message}`);
+        const validatedUsersResult = z.array(CsvUserImportSchema).safeParse(parsedCsv.data);
+        if (!validatedUsersResult.success) throw new Error(`Invalid user data in CSV: ${validatedUsersResult.error.errors[0].message}`);
 
         const userNames = new Set<string>();
-        for (const user of validatedUsers.data) {
+        for (const user of validatedUsersResult.data) {
             if (userNames.has(user.name)) throw new Error(`Duplicate user name found in CSV file: "${user.name}". User names must be unique.`);
             userNames.add(user.name);
         }
@@ -522,10 +542,10 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
         const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
         if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
 
-        const validatedDscs = z.array(CsvDscImportSchema).safeParse(parsedCsv.data);
-        if (!validatedDscs.success) throw new Error(`Invalid DSC data in CSV: ${validatedDscs.error.errors[0].message}`);
+        const validatedDscsResult = z.array(CsvDscImportSchema).safeParse(parsedCsv.data);
+        if (!validatedDscsResult.success) throw new Error(`Invalid DSC data in CSV: ${validatedDscsResult.error.errors[0].message}`);
         
-        for (const dsc of validatedDscs.data) {
+        for (const dsc of validatedDscsResult.data) {
             const expiryDate = new Date(dsc['expiryDate (YYYY-MM-DD)']);
             if (isNaN(expiryDate.getTime())) throw new Error(`Invalid date format for DSC S/N ${dsc.serialNumber}`);
         }
@@ -534,16 +554,15 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
         const userNameToIdMap = new Map<string, string>();
         allUsersSnapshot.forEach(doc => userNameToIdMap.set(doc.data().name, doc.id));
         
+        await deleteCollection('dscs');
         const dscWriteBatch = writeBatch(db);
         const userUpdateBatch = writeBatch(db);
-
-        await deleteCollection('dscs', dscWriteBatch);
         
         allUsersSnapshot.forEach(userDoc => {
             userUpdateBatch.update(userDoc.ref, { hasDsc: false });
         });
 
-        validatedDscs.data.forEach(dsc => {
+        validatedDscsResult.data.forEach(dsc => {
             const newDscRef = doc(collection(db, 'dscs'));
             let currentHolderId: string | null = null;
             let status: 'storage' | 'with-employee' = 'storage';
@@ -564,7 +583,7 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
             const newDscData = {
                 serialNumber: dsc.serialNumber,
                 description: dsc.description,
-                expiryDate: Timestamp.fromDate(expiryDate),
+                expiryDate: expiryDate,
                 status,
                 currentHolderId,
                 location: { mainBox: dsc.locationMainBox ?? 1, subBox: dsc.locationSubBox ?? 'a' }
@@ -583,46 +602,4 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
     
     revalidatePath('/');
     return { success: true, message: 'DSCs imported successfully. All previous DSCs have been overwritten.' };
-}
-
-const SignUpSchema = z.object({
-  name: z.string().min(3, { message: "Name must be at least 3 characters." }),
-  email: z.string().email({ message: "Please enter a valid email." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-});
-
-type SignUpActionState = {
-  errors?: {
-    name?: string[];
-    email?: string[];
-    password?: string[];
-  };
-  message?: string;
-  success?: boolean;
-};
-
-export async function signUpAction(prevState: SignUpActionState, formData: FormData): Promise<SignUpActionState> {
-  const validatedFields = SignUpSchema.safeParse({
-    name: formData.get('name'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Failed to sign up. Please check the fields.',
-      success: false,
-    };
-  }
-  
-  try {
-    await registerUser(validatedFields.data);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return { message: `Sign up failed: ${errorMessage}.`, success: false };
-  }
-
-  revalidatePath('/login');
-  return { message: 'Account created successfully! You can now sign in.', success: true };
 }
