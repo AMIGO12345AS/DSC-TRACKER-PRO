@@ -2,10 +2,13 @@
 
 import { z } from 'zod';
 import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
-import { addUser, updateUser, deleteUser } from '@/services/user';
+import { addUser, updateUser, deleteUser, getUsers } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
-import type { DSC } from '@/types';
+import type { DSC, User } from '@/types';
+import { db } from '@/lib/firebase';
+import { collection, doc, getDocs, query, runTransaction, Timestamp, writeBatch } from 'firebase/firestore';
+
 
 const DscSchema = z.object({
   description: z.string().min(1, { message: "Description is required." }),
@@ -346,4 +349,121 @@ export async function getDscsSortedByExpiryAction(): Promise<{ dscs?: DSC[]; err
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { error: `Database Error: ${errorMessage}.` };
     }
+}
+
+// Action to export all data
+export async function exportDataAction(): Promise<{ success: boolean; data?: { users: User[], dscs: DSC[] }; message?: string; }> {
+    try {
+        const [users, dscs] = await Promise.all([
+            getUsers(),
+            getDscs()
+        ]);
+        return { success: true, data: { users, dscs } };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Database Error: ${errorMessage}.` };
+    }
+}
+
+// Zod schema for imported data validation
+const ImportedDataSchema = z.object({
+  users: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    role: z.enum(['leader', 'employee']),
+    hasDsc: z.boolean(),
+  })),
+  dscs: z.array(z.object({
+    id: z.string(),
+    serialNumber: z.string(),
+    description: z.string(),
+    expiryDate: z.string(), // ISO string
+    status: z.enum(['storage', 'with-employee']),
+    location: z.object({
+      mainBox: z.number(),
+      subBox: z.string(),
+    }),
+    currentHolderId: z.string().nullable().optional(),
+  })),
+});
+
+
+// Helper to delete all documents in a collection in batches
+async function deleteCollection(collectionPath: string) {
+    const collectionRef = collection(db, collectionPath);
+    const q = query(collectionRef);
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+        return;
+    }
+
+    const batchSize = 500;
+    const batches = [];
+
+    for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+        const batch = writeBatch(db);
+        snapshot.docs.slice(i, i + batchSize).forEach(doc => batch.delete(doc.ref));
+        batches.push(batch.commit());
+    }
+
+    await Promise.all(batches);
+}
+
+// Action to import data, overwriting existing data
+export async function importDataAction(jsonString: string): Promise<{ success: boolean; message: string; }> {
+    let parsedData;
+    try {
+        parsedData = JSON.parse(jsonString);
+    } catch (error) {
+        return { success: false, message: 'Invalid JSON file. Could not parse.' };
+    }
+
+    const validatedData = ImportedDataSchema.safeParse(parsedData);
+    if (!validatedData.success) {
+        console.error(validatedData.error.flatten().fieldErrors);
+        return { success: false, message: `Invalid data structure in JSON file. ${validatedData.error.message}` };
+    }
+    
+    const { users: importedUsers, dscs: importedDscs } = validatedData.data;
+
+    try {
+        // 1. Delete all existing data
+        await deleteCollection('dscs');
+        await deleteCollection('users');
+        await deleteCollection('auditLogs');
+
+        // 2. Batch write new users and create ID map
+        const oldToNewUserIdMap = new Map<string, string>();
+        const userBatch = writeBatch(db);
+        importedUsers.forEach(user => {
+            const newUserRef = doc(collection(db, 'users'));
+            oldToNewUserIdMap.set(user.id, newUserRef.id);
+            const { id, ...userData } = user;
+            userBatch.set(newUserRef, userData);
+        });
+        await userBatch.commit();
+
+        // 3. Batch write new DSCs
+        const dscBatch = writeBatch(db);
+        importedDscs.forEach(dsc => {
+            const newDscRef = doc(collection(db, 'dscs'));
+            const { id, expiryDate, currentHolderId, ...dscData } = dsc;
+
+            const newDscData: any = {
+                ...dscData,
+                expiryDate: Timestamp.fromDate(new Date(expiryDate)),
+                currentHolderId: currentHolderId ? oldToNewUserIdMap.get(currentHolderId) || null : null,
+            };
+            dscBatch.set(newDscRef, newDscData);
+        });
+        await dscBatch.commit();
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Database write failed: ${errorMessage}.` };
+    }
+    
+    revalidatePath('/');
+    return { success: true, message: 'Data imported successfully.' };
 }
