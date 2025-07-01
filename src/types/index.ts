@@ -17,3 +17,13 @@ export interface DSC {
   };
   currentHolderId?: string;
 }
+
+export interface AuditLog {
+  id: string;
+  timestamp: string; // ISO string
+  userId: string;
+  userName: string;
+  action: 'TAKE' | 'RETURN' | 'ADD_DSC' | 'UPDATE_DSC' | 'DELETE_DSC';
+  dscSerialNumber: string;
+  dscDescription: string;
+}

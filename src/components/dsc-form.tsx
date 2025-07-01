@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { addDscAction, editDscAction } from '@/app/actions';
-import type { DSC } from '@/types';
+import type { DSC, User } from '@/types';
 import { format } from 'date-fns';
 
 type DscFormProps = {
   dsc?: DSC | null;
+  loggedInUser: User;
   onSuccess: () => void;
   onCancel: () => void;
 };
@@ -30,7 +31,7 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
   );
 }
 
-export function DscForm({ dsc, onSuccess, onCancel }: DscFormProps) {
+export function DscForm({ dsc, loggedInUser, onSuccess, onCancel }: DscFormProps) {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditing = !!dsc;
@@ -60,6 +61,9 @@ export function DscForm({ dsc, onSuccess, onCancel }: DscFormProps) {
   return (
     <form action={dispatch} ref={formRef}>
       {isEditing && <input type="hidden" name="dscId" value={dsc.id} />}
+      <input type="hidden" name="actorId" value={loggedInUser.id} />
+      <input type="hidden" name="actorName" value={loggedInUser.name} />
+
       <div className="grid gap-4 py-4">
         <div className="space-y-1">
           <div className="grid grid-cols-4 items-center gap-4">

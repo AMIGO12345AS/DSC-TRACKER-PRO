@@ -1,7 +1,7 @@
 'use server';
 import { db } from '@/lib/firebase';
 import type { DSC } from '@/types';
-import { collection, getDocs, addDoc, doc, updateDoc, Timestamp, query, where, runTransaction } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, Timestamp, query, where, runTransaction, getDoc } from 'firebase/firestore';
 
 export async function getDscs(): Promise<DSC[]> {
   try {
@@ -20,6 +20,7 @@ export async function getDscs(): Promise<DSC[]> {
         id: doc.id,
         ...data,
         expiryDate,
+        description: data.description || 'N/A'
       } as DSC;
     });
     return dscList;

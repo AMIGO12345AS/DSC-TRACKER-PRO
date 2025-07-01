@@ -47,7 +47,14 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
     if (!selectedDsc || !loggedInUser) return;
     
     setIsSubmitting(true);
-    const result = await takeDscAction(selectedDsc.id, loggedInUser.id);
+    const payload = {
+        dscId: selectedDsc.id,
+        actorId: loggedInUser.id,
+        actorName: loggedInUser.name,
+        serialNumber: selectedDsc.serialNumber,
+        description: selectedDsc.description,
+    };
+    const result = await takeDscAction(payload);
     if (result.success) {
       toast({
         title: 'Success',

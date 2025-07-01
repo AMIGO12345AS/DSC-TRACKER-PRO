@@ -55,8 +55,15 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
     return dscResults;
   }, [searchTerm, allDscs, allUsers]);
 
-  const handleDeleteDsc = async (dscId: string) => {
-    const result = await deleteDscAction(dscId);
+  const handleDeleteDsc = async (dsc: (typeof searchResults)[0]) => {
+    const payload = {
+      dscId: dsc.id,
+      actorId: loggedInUser.id,
+      actorName: loggedInUser.name,
+      serialNumber: dsc.serialNumber,
+      description: dsc.description,
+    };
+    const result = await deleteDscAction(payload);
     if (result.message.includes('successfully')) {
         toast({ title: 'Success', description: result.message });
     } else {
@@ -119,6 +126,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
                               </Button>
                             }
                             onClose={onDialogClose}
+                            loggedInUser={loggedInUser}
                           />
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -136,7 +144,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel onClick={() => setSearchTerm('')}>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteDsc(dsc.id)}>
+                                    <AlertDialogAction onClick={() => handleDeleteDsc(dsc)}>
                                         Continue
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
@@ -158,7 +166,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
             <CardTitle className="font-headline">Leader Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <LeaderActions allUsers={allUsers} />
+            <LeaderActions allUsers={allUsers} loggedInUser={loggedInUser} />
           </CardContent>
         </Card>
       )}

@@ -1,8 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc, returnDsc } from '@/services/dsc';
+import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb } from '@/services/dsc';
 import { addUser, updateUser, deleteUser } from '@/services/user';
+import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 
 const DscSchema = z.object({
@@ -13,6 +14,11 @@ const DscSchema = z.object({
   subBox: z.string().length(1, "Sub box must be a single letter").regex(/^[a-i]$/, "Sub box must be a-i"),
 });
 
+const ActorSchema = z.object({
+  actorId: z.string().min(1, { message: "Actor ID is missing." }),
+  actorName: z.string().min(1, { message: "Actor name is missing." }),
+});
+
 type ActionState = {
     errors?: {
         description?: string[];
@@ -20,6 +26,8 @@ type ActionState = {
         expiryDate?: string[];
         mainBox?: string[];
         subBox?: string[];
+        actorId?: string[];
+        actorName?: string[];
     };
     message?: string;
 };
@@ -33,14 +41,26 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
     subBox: formData.get('subBox'),
   });
 
+  const validatedActor = ActorSchema.safeParse({
+    actorId: formData.get('actorId'),
+    actorName: formData.get('actorName'),
+  });
+
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: 'Failed to add DSC. Please check the fields.',
     };
   }
+   if (!validatedActor.success) {
+    return {
+      errors: validatedActor.error.flatten().fieldErrors,
+      message: 'Failed to identify the acting user.',
+    };
+  }
   
   const { description, serialNumber, expiryDate, mainBox, subBox } = validatedFields.data;
+  const { actorId, actorName } = validatedActor.data;
 
   try {
     await addDscToDb({
@@ -49,11 +69,20 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
       expiryDate,
       location: { mainBox, subBox },
     });
+    
+    await addAuditLog({
+        userId: actorId,
+        userName: actorName,
+        action: 'ADD_DSC',
+        dscSerialNumber: serialNumber,
+        dscDescription: description,
+    });
+
   } catch (error) {
     console.error(error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return {
-      message: `Database Error: ${errorMessage}. Please ensure Firestore is set up correctly with read/write permissions.`,
+      message: `Database Error: ${errorMessage}.`,
     };
   }
 
@@ -75,6 +104,11 @@ export async function editDscAction(prevState: ActionState, formData: FormData):
     subBox: formData.get('subBox'),
   });
 
+  const validatedActor = ActorSchema.safeParse({
+    actorId: formData.get('actorId'),
+    actorName: formData.get('actorName'),
+  });
+
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
@@ -82,7 +116,15 @@ export async function editDscAction(prevState: ActionState, formData: FormData):
     };
   }
 
+  if (!validatedActor.success) {
+    return {
+      errors: validatedActor.error.flatten().fieldErrors,
+      message: 'Failed to identify the acting user.',
+    };
+  }
+
   const { description, serialNumber, expiryDate, mainBox, subBox } = validatedFields.data;
+  const { actorId, actorName } = validatedActor.data;
 
   try {
     await updateDscInDb(dscId, {
@@ -90,6 +132,14 @@ export async function editDscAction(prevState: ActionState, formData: FormData):
       description,
       expiryDate,
       location: { mainBox, subBox },
+    });
+
+    await addAuditLog({
+        userId: actorId,
+        userName: actorName,
+        action: 'UPDATE_DSC',
+        dscSerialNumber: serialNumber,
+        dscDescription: description,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -102,12 +152,30 @@ export async function editDscAction(prevState: ActionState, formData: FormData):
   return { message: 'DSC updated successfully.' };
 }
 
-export async function deleteDscAction(dscId: string): Promise<{ message: string }> {
-    if (!dscId) {
-        return { message: 'DSC ID is missing.' };
+const DeleteDscPayload = z.object({
+  dscId: z.string(),
+  actorId: z.string(),
+  actorName: z.string(),
+  serialNumber: z.string(),
+  description: z.string(),
+});
+
+export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>): Promise<{ message: string }> {
+    const validatedPayload = DeleteDscPayload.safeParse(payload);
+    if (!validatedPayload.success) {
+      return { message: 'Invalid payload for delete action.' };
     }
+    const { dscId, actorId, actorName, serialNumber, description } = validatedPayload.data;
+
     try {
         await deleteDscFromDb(dscId);
+        await addAuditLog({
+          userId: actorId,
+          userName: actorName,
+          action: 'DELETE_DSC',
+          dscSerialNumber: serialNumber,
+          dscDescription: description,
+        });
     } catch(error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { message: `Database Error: ${errorMessage}.` };
@@ -201,12 +269,30 @@ export async function deleteUserAction(userId: string): Promise<{ message: strin
 
 
 // Actions for Take/Return DSC
-export async function takeDscAction(dscId: string, userId: string): Promise<{ success: boolean; message: string }> {
-    if (!dscId || !userId) {
-        return { success: false, message: 'DSC ID and User ID are required.' };
+const DscInteractionPayload = z.object({
+  dscId: z.string(),
+  actorId: z.string(),
+  actorName: z.string(),
+  serialNumber: z.string(),
+  description: z.string(),
+});
+
+export async function takeDscAction(payload: z.infer<typeof DscInteractionPayload>): Promise<{ success: boolean; message: string }> {
+    const validatedPayload = DscInteractionPayload.safeParse(payload);
+    if (!validatedPayload.success) {
+      return { success: false, message: 'Invalid payload for take action.' };
     }
+    const { dscId, actorId, actorName, serialNumber, description } = validatedPayload.data;
+    
     try {
-        await takeDsc(dscId, userId);
+        await takeDscFromDb(dscId, actorId);
+        await addAuditLog({
+            userId: actorId,
+            userName: actorName,
+            action: 'TAKE',
+            dscSerialNumber: serialNumber,
+            dscDescription: description,
+        });
         revalidatePath('/');
         return { success: true, message: 'DSC taken successfully.' };
     } catch (error) {
@@ -215,16 +301,37 @@ export async function takeDscAction(dscId: string, userId: string): Promise<{ su
     }
 }
 
-export async function returnDscAction(dscId: string, userId: string): Promise<{ success: boolean; message: string }> {
-    if (!dscId || !userId) {
-        return { success: false, message: 'DSC ID and User ID are required.' };
+export async function returnDscAction(payload: z.infer<typeof DscInteractionPayload>): Promise<{ success: boolean; message: string }> {
+    const validatedPayload = DscInteractionPayload.safeParse(payload);
+    if (!validatedPayload.success) {
+      return { success: false, message: 'Invalid payload for return action.' };
     }
+    const { dscId, actorId, actorName, serialNumber, description } = validatedPayload.data;
     try {
-        await returnDsc(dscId, userId);
+        await returnDscFromDb(dscId, actorId);
+        await addAuditLog({
+            userId: actorId,
+            userName: actorName,
+            action: 'RETURN',
+            dscSerialNumber: serialNumber,
+            dscDescription: description,
+        });
         revalidatePath('/');
         return { success: true, message: 'DSC returned successfully.' };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { success: false, message: `Database Error: ${errorMessage}.` };
+    }
+}
+
+
+// Action to get audit logs
+export async function getAuditLogsAction(): Promise<{ logs?: any[]; error?: string; }> {
+    try {
+        const logs = await getAuditLogs();
+        return { logs };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { error: `Database Error: ${errorMessage}.` };
     }
 }

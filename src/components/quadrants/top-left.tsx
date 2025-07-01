@@ -28,7 +28,16 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
   const handleReturnDsc = async () => {
     if (!myDsc) return;
     setIsSubmitting(true);
-    const result = await returnDscAction(myDsc.id, loggedInUser.id);
+    
+    const payload = {
+      dscId: myDsc.id,
+      actorId: loggedInUser.id,
+      actorName: loggedInUser.name,
+      serialNumber: myDsc.serialNumber,
+      description: myDsc.description,
+    };
+
+    const result = await returnDscAction(payload);
     if (result.success) {
       toast({
         title: 'Success',
@@ -68,7 +77,7 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
               <div className="flex items-center gap-3">
                 <KeyIcon className="h-6 w-6 text-primary" />
                 <div>
-                  <p className="font-semibold">DSC In Possession</p>
+                  <p className="font-semibold">{myDsc.description}</p>
                   <p className="text-sm text-muted-foreground">S/N: {myDsc.serialNumber}</p>
                 </div>
               </div>
