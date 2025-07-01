@@ -1,29 +1,39 @@
 
 import * as admin from 'firebase-admin';
+import serviceAccountKey from '../../serviceAccountKey.json';
+
+// Define the expected structure of the service account for type safety
+interface ServiceAccount {
+  type: string;
+  project_id: string;
+  private_key_id: string;
+  private_key: string;
+  client_email: string;
+  client_id: string;
+  auth_uri: string;
+  token_uri: string;
+  auth_provider_x509_cert_url: string;
+  client_x509_cert_url: string;
+  universe_domain: string;
+}
 
 function getServiceAccount(): admin.ServiceAccount {
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON;
+  // The imported JSON might be nested under a 'default' property depending on the module system.
+  // This handles both cases.
+  const credentials = (serviceAccountKey as any).default || serviceAccountKey;
 
-  if (!serviceAccountJson) {
+  // A robust check for the essential fields required by Firebase.
+  if (
+    !credentials.project_id ||
+    !credentials.private_key ||
+    !credentials.client_email
+  ) {
     throw new Error(
-      'The FIREBASE_SERVICE_ACCOUNT_KEY_JSON environment variable is not set. Please follow the instructions to set it up.'
+      'The serviceAccountKey.json file is not structured correctly or is missing required fields (project_id, private_key, client_email). Please ensure the file is a valid Firebase service account key.'
     );
   }
 
-  try {
-    const serviceAccount = JSON.parse(serviceAccountJson);
-    
-    // A robust check for the essential fields required by Firebase.
-    if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
-        throw new Error('The parsed service account credentials are not structured correctly or are missing required fields (project_id, private_key, client_email).');
-    }
-
-    return serviceAccount as admin.ServiceAccount;
-  } catch (error) {
-    throw new Error(
-      `Failed to parse the FIREBASE_SERVICE_ACCOUNT_KEY_JSON environment variable. Please ensure it's a valid JSON string. Error: ${error instanceof Error ? error.message : 'Unknown'}`
-    );
-  }
+  return credentials as admin.ServiceAccount;
 }
 
 function initializeAdminApp() {
@@ -32,9 +42,9 @@ function initializeAdminApp() {
   }
 
   try {
-    const credentials = getServiceAccount();
+    const serviceAccount = getServiceAccount();
     return admin.initializeApp({
-      credential: admin.credential.cert(credentials),
+      credential: admin.credential.cert(serviceAccount),
     });
   } catch (error: any) {
     console.error('Firebase Admin initialization failed:', error.message);
