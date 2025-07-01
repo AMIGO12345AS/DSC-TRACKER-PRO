@@ -13,8 +13,8 @@ const usersData = [
     },
     {
         uid: 'rl4icoGtSmMwXqCcxlWoiHqlBiO2',
-        email: 'aseem@certitrack.app',
-        password: 'password123',
+        email: 'aseemnrs@gmail.com',
+        password: '123123',
         name: 'Aseem',
         role: 'employee' as const,
     },
@@ -39,11 +39,10 @@ export async function ensureDatabaseSeeded() {
     try {
         const usersCollection = adminDb.collection('users');
         const userDocs = await usersCollection.limit(1).get();
-        if (userDocs.empty) {
-            console.log('Users collection is empty. Seeding users...');
-            await seedUsers();
-        }
-
+        // This logic is now safer. It will run every time to ensure auth users match,
+        // without being destructive.
+        await seedUsers();
+        
         const dscsCollection = adminDb.collection('dscs');
         const dscDocs = await dscsCollection.limit(1).get();
         if (dscDocs.empty) {
@@ -61,31 +60,50 @@ async function seedUsers() {
     
     for (const userData of usersData) {
         try {
-            await adminAuth.createUser({
-                uid: userData.uid,
+            // Check if user exists, and update them if they do
+            await adminAuth.updateUser(userData.uid, {
                 email: userData.email,
                 password: userData.password,
                 displayName: userData.name,
             });
-            console.log(`Created Auth user: ${userData.email}`);
+            console.log(`Updated Auth user: ${userData.email}`);
         } catch (error: any) {
-            if (error.code === 'auth/uid-already-exists' || error.code === 'auth/email-already-exists') {
-                console.log(`Auth user ${userData.email} already exists. Skipping creation, but ensuring Firestore profile exists.`);
+            // If user does not exist, create them
+            if (error.code === 'auth/user-not-found') {
+                await adminAuth.createUser({
+                    uid: userData.uid,
+                    email: userData.email,
+                    password: userData.password,
+                    displayName: userData.name,
+                });
+                console.log(`Created Auth user: ${userData.email}`);
             } else {
-                throw error; // Re-throw other errors
+                console.error(`Error processing user ${userData.email}:`, error);
+                continue; // Skip Firestore part if auth fails
             }
         }
 
-        // Set user profile in Firestore, using the specified UID as the document ID
         const userDocRef = usersCollection.doc(userData.uid);
-        await userDocRef.set({
-            uid: userData.uid,
-            name: userData.name,
-            role: userData.role,
-            hasDsc: false,
-        });
+        const userDoc = await userDocRef.get();
+        
+        if (userDoc.exists()) {
+             // Only update non-state fields, leave `hasDsc` alone
+             await userDocRef.update({
+                uid: userData.uid,
+                name: userData.name,
+                role: userData.role,
+             });
+        } else {
+            // Create the doc if it doesn't exist
+            await userDocRef.set({
+                uid: userData.uid,
+                name: userData.name,
+                role: userData.role,
+                hasDsc: false,
+            });
+        }
     }
-    console.log(`Successfully seeded ${usersData.length} users in Firestore.`);
+    console.log(`Successfully seeded/updated ${usersData.length} users.`);
 }
 
 
