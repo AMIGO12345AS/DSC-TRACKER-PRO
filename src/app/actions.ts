@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, query, runTransaction, Timestamp, writeBatch } from 'firebase/firestore';
+import Papa from 'papaparse';
 
 
 const DscSchema = z.object({
@@ -365,8 +366,8 @@ export async function exportDataAction(): Promise<{ success: boolean; data?: { u
     }
 }
 
-// Zod schema for imported data validation
-const ImportedDataSchema = z.object({
+// Zod schema for imported JSON data
+const ImportedJsonDataSchema = z.object({
   users: z.array(z.object({
     id: z.string(),
     name: z.string(),
@@ -387,6 +388,22 @@ const ImportedDataSchema = z.object({
   })),
 });
 
+// Zod schemas for imported CSV data
+const CsvUserSchema = z.object({
+  type: z.literal('user'),
+  name: z.string().min(1, { message: 'User name is required.' }),
+  role: z.enum(['leader', 'employee'], { errorMap: () => ({ message: 'Role must be leader or employee.' }) }),
+});
+
+const CsvDscSchema = z.object({
+  type: z.literal('dsc'),
+  serialNumber: z.string().min(1, { message: 'DSC serial number is required.' }),
+  description: z.string().min(1, { message: 'DSC description is required.' }),
+  'expiryDate (YYYY-MM-DD)': z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Expiry date must be in YYYY-MM-DD format.' }),
+  currentHolderName: z.string().optional().nullable(),
+  locationMainBox: z.coerce.number().optional().nullable(),
+  locationSubBox: z.string().optional().nullable(),
+});
 
 // Helper to delete all documents in a collection in batches
 async function deleteCollection(collectionPath: string) {
@@ -394,9 +411,7 @@ async function deleteCollection(collectionPath: string) {
     const q = query(collectionRef);
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-        return;
-    }
+    if (snapshot.empty) return;
 
     const batchSize = 500;
     const batches = [];
@@ -411,59 +426,147 @@ async function deleteCollection(collectionPath: string) {
 }
 
 // Action to import data, overwriting existing data
-export async function importDataAction(jsonString: string): Promise<{ success: boolean; message: string; }> {
-    let parsedData;
+export async function importDataAction(fileContent: string, fileType: 'json' | 'csv'): Promise<{ success: boolean; message: string; }> {
     try {
-        parsedData = JSON.parse(jsonString);
-    } catch (error) {
-        return { success: false, message: 'Invalid JSON file. Could not parse.' };
-    }
-
-    const validatedData = ImportedDataSchema.safeParse(parsedData);
-    if (!validatedData.success) {
-        console.error(validatedData.error.flatten().fieldErrors);
-        return { success: false, message: `Invalid data structure in JSON file. ${validatedData.error.message}` };
-    }
-    
-    const { users: importedUsers, dscs: importedDscs } = validatedData.data;
-
-    try {
-        // 1. Delete all existing data
+        // 1. Delete all existing data first
         await deleteCollection('dscs');
         await deleteCollection('users');
         await deleteCollection('auditLogs');
 
-        // 2. Batch write new users and create ID map
-        const oldToNewUserIdMap = new Map<string, string>();
-        const userBatch = writeBatch(db);
-        importedUsers.forEach(user => {
-            const newUserRef = doc(collection(db, 'users'));
-            oldToNewUserIdMap.set(user.id, newUserRef.id);
-            const { id, ...userData } = user;
-            userBatch.set(newUserRef, userData);
-        });
-        await userBatch.commit();
-
-        // 3. Batch write new DSCs
-        const dscBatch = writeBatch(db);
-        importedDscs.forEach(dsc => {
-            const newDscRef = doc(collection(db, 'dscs'));
-            const { id, expiryDate, currentHolderId, ...dscData } = dsc;
-
-            const newDscData: any = {
-                ...dscData,
-                expiryDate: Timestamp.fromDate(new Date(expiryDate)),
-                currentHolderId: currentHolderId ? oldToNewUserIdMap.get(currentHolderId) || null : null,
-            };
-            dscBatch.set(newDscRef, newDscData);
-        });
-        await dscBatch.commit();
+        // 2. Process based on file type
+        if (fileType === 'json') {
+            await processJsonImport(fileContent);
+        } else if (fileType === 'csv') {
+            await processCsvImport(fileContent);
+        } else {
+            return { success: false, message: 'Unsupported file type.' };
+        }
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        return { success: false, message: `Database write failed: ${errorMessage}.` };
+        return { success: false, message: `Import failed: ${errorMessage}.` };
     }
     
     revalidatePath('/');
     return { success: true, message: 'Data imported successfully.' };
+}
+
+
+async function processJsonImport(jsonString: string) {
+    let parsedData;
+    try {
+        parsedData = JSON.parse(jsonString);
+    } catch (error) {
+        throw new Error('Invalid JSON file. Could not parse.');
+    }
+
+    const validatedData = ImportedJsonDataSchema.safeParse(parsedData);
+    if (!validatedData.success) {
+        throw new Error(`Invalid data structure in JSON file. ${validatedData.error.message}`);
+    }
+    
+    const { users: importedUsers, dscs: importedDscs } = validatedData.data;
+
+    // Batch write new users and create ID map
+    const oldToNewUserIdMap = new Map<string, string>();
+    const userBatch = writeBatch(db);
+    importedUsers.forEach(user => {
+        const newUserRef = doc(collection(db, 'users'));
+        oldToNewUserIdMap.set(user.id, newUserRef.id);
+        const { id, ...userData } = user;
+        userBatch.set(newUserRef, userData);
+    });
+    await userBatch.commit();
+
+    // Batch write new DSCs
+    const dscBatch = writeBatch(db);
+    importedDscs.forEach(dsc => {
+        const newDscRef = doc(collection(db, 'dscs'));
+        const { id, expiryDate, currentHolderId, ...dscData } = dsc;
+
+        const newDscData: any = {
+            ...dscData,
+            expiryDate: Timestamp.fromDate(new Date(expiryDate)),
+            currentHolderId: currentHolderId ? oldToNewUserIdMap.get(currentHolderId) || null : null,
+        };
+        dscBatch.set(newDscRef, newDscData);
+    });
+    await dscBatch.commit();
+}
+
+async function processCsvImport(csvString: string) {
+    const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
+    
+    if (parsedCsv.errors.length > 0) {
+        throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
+    }
+
+    const rows = parsedCsv.data;
+    const usersFromCsv = rows.filter((row: any) => row.type === 'user');
+    const dscsFromCsv = rows.filter((row: any) => row.type === 'dsc');
+    
+    // Validate users
+    const validatedUsers = z.array(CsvUserSchema).safeParse(usersFromCsv);
+    if (!validatedUsers.success) {
+        throw new Error(`Invalid user data in CSV: ${validatedUsers.error.errors[0].message}`);
+    }
+
+    // Validate DSCs
+    const validatedDscs = z.array(CsvDscSchema).safeParse(dscsFromCsv);
+     if (!validatedDscs.success) {
+        throw new Error(`Invalid DSC data in CSV: ${validatedDscs.error.errors[0].message}`);
+    }
+
+    // Process users and create a name-to-ID map
+    const userNameToNewId = new Map<string, string>();
+    const userBatch = writeBatch(db);
+    validatedUsers.data.forEach(user => {
+        const newUserRef = doc(collection(db, 'users'));
+        userNameToNewId.set(user.name, newUserRef.id);
+        userBatch.set(newUserRef, { name: user.name, role: user.role, hasDsc: false });
+    });
+    await userBatch.commit();
+
+    // Process DSCs
+    const dscBatch = writeBatch(db);
+    const userUpdateBatch = writeBatch(db);
+
+    validatedDscs.data.forEach(dsc => {
+        const newDscRef = doc(collection(db, 'dscs'));
+        let currentHolderId: string | null = null;
+        let status: 'storage' | 'with-employee' = 'storage';
+        
+        if (dsc.currentHolderName && userNameToNewId.has(dsc.currentHolderName)) {
+            currentHolderId = userNameToNewId.get(dsc.currentHolderName)!;
+            status = 'with-employee';
+            
+            // Mark the user as having a DSC
+            const userRef = doc(db, 'users', currentHolderId);
+            userUpdateBatch.update(userRef, { hasDsc: true });
+        }
+        
+        const expiryDate = new Date(dsc['expiryDate (YYYY-MM-DD)']);
+        if (isNaN(expiryDate.getTime())) {
+            throw new Error(`Invalid date format for DSC S/N ${dsc.serialNumber}`);
+        }
+
+        const location = {
+            mainBox: dsc.locationMainBox ?? 1,
+            subBox: dsc.locationSubBox ?? 'a'
+        };
+
+        const newDscData = {
+            serialNumber: dsc.serialNumber,
+            description: dsc.description,
+            expiryDate: Timestamp.fromDate(expiryDate),
+            status,
+            currentHolderId,
+            location
+        };
+
+        dscBatch.set(newDscRef, newDscData);
+    });
+
+    await dscBatch.commit();
+    await userUpdateBatch.commit();
 }
