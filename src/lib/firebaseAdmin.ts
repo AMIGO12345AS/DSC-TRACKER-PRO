@@ -1,26 +1,25 @@
 
 import * as admin from 'firebase-admin';
-// The import `* as ...` creates a module namespace object. In many bundler
-// configurations, the actual content of the JSON is on the `default` property.
-import * as serviceAccountRaw from '../../serviceAccountKey.json';
-
-// This explicitly extracts the service account object from the imported module.
-// Previous attempts to create a fallback were causing the invalid credential error.
-const serviceAccount = (serviceAccountRaw as any).default;
+import * as serviceAccount from '../../serviceAccountKey.json';
 
 function initializeAdminApp() {
   if (admin.apps.length > 0) {
     return admin.app();
   }
 
-  // A check to provide a clearer error if the service account is still not found.
-  if (!serviceAccount) {
-    throw new Error('Firebase Admin Service Account is not loaded correctly. Check the import in firebaseAdmin.ts.');
+  // The import `* as serviceAccount` creates a module namespace object.
+  // In some bundlers, this object itself contains the JSON keys.
+  // This approach attempts to use the imported object directly, which is a
+  // different strategy from previous attempts that looked for a '.default' property.
+  
+  // A check to provide a clearer error if the service account is invalid.
+  if (!serviceAccount || !(serviceAccount as any).project_id) {
+    throw new Error('Firebase Admin Service Account is not loaded correctly. It might be empty or missing project_id. Check the import in firebaseAdmin.ts.');
   }
 
   try {
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     });
   } catch (error: any) {
     console.error('Firebase Admin initialization failed:', error.message);
