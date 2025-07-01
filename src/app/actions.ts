@@ -1,11 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { addDsc as addDscToDb, takeDsc, returnDsc } from '@/services/dsc';
+import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc, returnDsc } from '@/services/dsc';
 import { addUser, updateUser, deleteUser } from '@/services/user';
 import { revalidatePath } from 'next/cache';
 
-const AddDscSchema = z.object({
+const DscSchema = z.object({
   description: z.string().min(1, { message: "Description is required." }),
   serialNumber: z.string().min(1, { message: "Serial number is required." }),
   expiryDate: z.string({required_error: "Expiry date is required."}).min(1, { message: "Expiry date is required." }),
@@ -25,7 +25,7 @@ type ActionState = {
 };
 
 export async function addDscAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
-  const validatedFields = AddDscSchema.safeParse({
+  const validatedFields = DscSchema.safeParse({
     description: formData.get('description'),
     serialNumber: formData.get('serialNumber'),
     expiryDate: formData.get('expiryDate'),
@@ -59,6 +59,61 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
 
   revalidatePath('/');
   return { message: 'DSC added successfully.' };
+}
+
+export async function editDscAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const dscId = formData.get('dscId');
+  if (typeof dscId !== 'string' || !dscId) {
+    return { message: 'DSC ID is missing.' };
+  }
+
+  const validatedFields = DscSchema.safeParse({
+    description: formData.get('description'),
+    serialNumber: formData.get('serialNumber'),
+    expiryDate: formData.get('expiryDate'),
+    mainBox: formData.get('mainBox'),
+    subBox: formData.get('subBox'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to update DSC. Please check the fields.',
+    };
+  }
+
+  const { description, serialNumber, expiryDate, mainBox, subBox } = validatedFields.data;
+
+  try {
+    await updateDscInDb(dscId, {
+      serialNumber,
+      description,
+      expiryDate,
+      location: { mainBox, subBox },
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return {
+      message: `Database Error: ${errorMessage}.`,
+    };
+  }
+
+  revalidatePath('/');
+  return { message: 'DSC updated successfully.' };
+}
+
+export async function deleteDscAction(dscId: string): Promise<{ message: string }> {
+    if (!dscId) {
+        return { message: 'DSC ID is missing.' };
+    }
+    try {
+        await deleteDscFromDb(dscId);
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { message: `Database Error: ${errorMessage}.` };
+    }
+    revalidatePath('/');
+    return { message: 'DSC deleted successfully.' };
 }
 
 

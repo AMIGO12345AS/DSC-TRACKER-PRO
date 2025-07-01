@@ -1,7 +1,7 @@
 'use server';
 import { db } from '@/lib/firebase';
 import type { DSC } from '@/types';
-import { collection, getDocs, addDoc, Timestamp, query, where, doc, runTransaction } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, Timestamp, query, where, runTransaction } from 'firebase/firestore';
 
 export async function getDscs(): Promise<DSC[]> {
   try {
@@ -54,6 +54,49 @@ export async function addDsc(dscData: AddDscData) {
 
     const docRef = await addDoc(dscsCol, newDsc);
     return docRef.id;
+}
+
+type UpdateDscData = Pick<DSC, 'serialNumber' | 'description'> & {
+  expiryDate: string;
+  location: { mainBox: number, subBox: string };
+};
+
+export async function updateDsc(dscId: string, dscData: UpdateDscData) {
+  const dscRef = doc(db, 'dscs', dscId);
+
+  // Check if another DSC with the new serial number already exists (and it's not the current one)
+  if (dscData.serialNumber) {
+      const q = query(collection(db, 'dscs'), where("serialNumber", "==", dscData.serialNumber));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty && querySnapshot.docs.some(d => d.id !== dscId)) {
+        throw new Error(`Another DSC with serial number ${dscData.serialNumber} already exists.`);
+      }
+  }
+
+  const updatedDsc = {
+    ...dscData,
+    expiryDate: Timestamp.fromDate(new Date(dscData.expiryDate)),
+  };
+
+  await updateDoc(dscRef, updatedDsc);
+}
+
+export async function deleteDsc(dscId: string) {
+    const dscRef = doc(db, 'dscs', dscId);
+    
+    await runTransaction(db, async (transaction) => {
+        const dscDoc = await transaction.get(dscRef);
+        if (!dscDoc.exists()) {
+            throw new Error("DSC not found.");
+        }
+        const dscData = dscDoc.data();
+
+        if (dscData.status === 'with-employee') {
+            throw new Error("Cannot delete a DSC that is currently held by an employee.");
+        }
+        
+        transaction.delete(dscRef);
+    });
 }
 
 

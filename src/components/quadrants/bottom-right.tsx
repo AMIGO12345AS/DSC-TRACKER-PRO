@@ -3,11 +3,26 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, Edit, Trash2 } from 'lucide-react';
 import { LeaderActions } from '../leader-actions';
 import type { DSC, User } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { KeyIcon } from '../icons';
+import { ManageDscDialog } from '../manage-dsc-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '../ui/button';
+import { deleteDscAction } from '@/app/actions';
+import { useToast } from '@/hooks/use-toast';
 
 interface BottomRightQuadrantProps {
   allDscs: DSC[];
@@ -18,6 +33,7 @@ interface BottomRightQuadrantProps {
 
 export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, loggedInUser }: BottomRightQuadrantProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
@@ -39,14 +55,27 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
     return dscResults;
   }, [searchTerm, allDscs, allUsers]);
 
+  const handleDeleteDsc = async (dscId: string) => {
+    const result = await deleteDscAction(dscId);
+    if (result.message.includes('successfully')) {
+        toast({ title: 'Success', description: result.message });
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+    setSearchTerm(''); // Clear search after action
+  };
+
   const handleSelect = (dsc: (typeof searchResults)[0]) => {
     if (dsc.status === 'with-employee' && dsc.user) {
       onHighlight({ type: 'employee', id: dsc.user.id });
     } else {
       onHighlight({ type: 'dsc', id: dsc.location.mainBox.toString() });
     }
-    setSearchTerm('');
   };
+  
+  const onDialogClose = () => {
+      setSearchTerm('');
+  }
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -66,19 +95,55 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
           </div>
           {searchResults.length > 0 && (
             <Card className="absolute top-full z-10 mt-2 w-full">
-              <ScrollArea className="h-auto max-h-48">
+              <ScrollArea className="h-auto max-h-60">
                 <CardContent className="p-2">
                   {searchResults.map((dsc) => (
                     <div
                       key={dsc.id}
-                      onClick={() => handleSelect(dsc)}
-                      className="flex cursor-pointer items-center gap-3 rounded-md p-2 hover:bg-secondary"
+                      className="flex items-center gap-3 rounded-md p-2 hover:bg-secondary group"
                     >
-                      <KeyIcon className="h-5 w-5 text-primary" />
-                      <div>
+                      <div className="flex-shrink-0 cursor-pointer" onClick={() => handleSelect(dsc)}>
+                        <KeyIcon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 cursor-pointer" onClick={() => handleSelect(dsc)}>
                         <p className="font-semibold">{dsc.description}</p>
                         <p className="text-sm text-muted-foreground">{dsc.serialNumber} - {dsc.status === 'storage' ? `Box ${dsc.location.mainBox}` : `With ${dsc.user?.name || 'User'}`}</p>
                       </div>
+                      {loggedInUser.role === 'leader' && (
+                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ManageDscDialog
+                            dsc={dsc}
+                            trigger={
+                              <Button variant="ghost" size="icon">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            }
+                            onClose={onDialogClose}
+                          />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                               <Button variant="ghost" size="icon" disabled={dsc.status !== 'storage'} title={dsc.status !== 'storage' ? "Cannot delete a DSC in use" : "Delete DSC"}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                               </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the DSC.
+                                        You cannot delete a DSC that is currently in use by an employee.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setSearchTerm('')}>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteDsc(dsc.id)}>
+                                        Continue
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </CardContent>
