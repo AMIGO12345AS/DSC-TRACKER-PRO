@@ -1,29 +1,36 @@
 
 import * as admin from 'firebase-admin';
-import * as serviceAccount from '../../serviceAccountKey.json';
+import * as serviceAccountRaw from '../../serviceAccountKey.json';
+
+function getServiceAccount(): admin.ServiceAccount {
+    // The imported value might be the JSON object itself, or it might be
+    // nested under a `default` property due to bundler behavior.
+    // This handles both cases.
+    const serviceAccount = (serviceAccountRaw as any).default || serviceAccountRaw;
+
+    // A robust check for the essential fields required by Firebase.
+    if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
+        console.error('Invalid Service Account Structure:', JSON.stringify(serviceAccount, null, 2));
+        throw new Error('The service account credentials are not structured correctly or are missing required fields (project_id, private_key, client_email).');
+    }
+    
+    return serviceAccount as admin.ServiceAccount;
+}
+
 
 function initializeAdminApp() {
   if (admin.apps.length > 0) {
     return admin.app();
   }
 
-  // The import `* as serviceAccount` creates a module namespace object.
-  // In some bundlers, this object itself contains the JSON keys.
-  // This approach attempts to use the imported object directly, which is a
-  // different strategy from previous attempts that looked for a '.default' property.
-  
-  // A check to provide a clearer error if the service account is invalid.
-  if (!serviceAccount || !(serviceAccount as any).project_id) {
-    throw new Error('Firebase Admin Service Account is not loaded correctly. It might be empty or missing project_id. Check the import in firebaseAdmin.ts.');
-  }
-
   try {
+    const credentials = getServiceAccount();
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+      credential: admin.credential.cert(credentials),
     });
   } catch (error: any) {
     console.error('Firebase Admin initialization failed:', error.message);
-    throw error;
+    throw new Error(`Failed to initialize Firebase Admin SDK. Please check your service account configuration. Original error: ${error.message}`);
   }
 }
 
