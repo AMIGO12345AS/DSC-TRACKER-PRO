@@ -1,6 +1,11 @@
 
 import * as admin from 'firebase-admin';
-import serviceAccount from '../../serviceAccountKey.json';
+// Use import * to handle module interoperability issues. The JSON content
+// might be the module itself or nested under a `default` property.
+import * as serviceAccountRaw from '../../serviceAccountKey.json';
+
+// This normalization ensures we get the actual service account object.
+const serviceAccount = (serviceAccountRaw as any).default || serviceAccountRaw;
 
 function initializeAdminApp() {
   if (admin.apps.length > 0) {
