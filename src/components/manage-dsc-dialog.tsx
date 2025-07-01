@@ -16,29 +16,22 @@ interface ManageDscDialogProps {
   dsc?: DSC | null;
   trigger: React.ReactNode;
   loggedInUser: User;
-  onClose?: () => void;
+  onSuccess?: () => void;
 }
 
-export function ManageDscDialog({ dsc, trigger, loggedInUser, onClose }: ManageDscDialogProps) {
+export function ManageDscDialog({ dsc, trigger, loggedInUser, onSuccess }: ManageDscDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSuccess = () => {
     setIsOpen(false);
-    onClose?.();
+    onSuccess?.();
   };
-  
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    if (!open) {
-      onClose?.();
-    }
-  }
   
   const isEditing = !!dsc;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild onClick={() => setIsOpen(true)}>{trigger}</DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="font-headline">

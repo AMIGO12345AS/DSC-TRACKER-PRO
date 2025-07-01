@@ -94,7 +94,14 @@ export function DscForm({ dsc, loggedInUser, onSuccess, onCancel }: DscFormProps
             <Label htmlFor="mainBox" className="text-right">Location</Label>
             <div className="col-span-3 grid grid-cols-2 gap-2">
               <Input id="mainBox" name="mainBox" type="number" defaultValue={dsc?.location.mainBox} placeholder="Main Box (1-8)" />
-              <Input id="subBox" name="subBox" defaultValue={dsc?.location.subBox} placeholder="Sub Box (a-i)" />
+              <Input
+                id="subBox"
+                name="subBox"
+                defaultValue={dsc?.location.subBox}
+                placeholder="Sub Box (a-i)"
+                maxLength={1}
+                onChange={(e) => { e.target.value = e.target.value.toLowerCase(); }}
+              />
             </div>
           </div>
           {state?.errors?.mainBox && <p className="col-start-2 col-span-3 text-right text-sm text-destructive">{state.errors.mainBox.join(', ')}</p>}

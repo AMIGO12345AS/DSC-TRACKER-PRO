@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, Edit, Trash2 } from 'lucide-react';
@@ -34,6 +35,7 @@ interface BottomRightQuadrantProps {
 export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, loggedInUser }: BottomRightQuadrantProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const router = useRouter();
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
@@ -66,6 +68,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
     const result = await deleteDscAction(payload);
     if (result.message.includes('successfully')) {
         toast({ title: 'Success', description: result.message });
+        router.refresh();
     } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
@@ -80,7 +83,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
     }
   };
   
-  const onDialogClose = () => {
+  const onEditSuccess = () => {
       setSearchTerm('');
   }
 
@@ -125,7 +128,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
                                 <Edit className="h-4 w-4" />
                               </Button>
                             }
-                            onClose={onDialogClose}
+                            onSuccess={onEditSuccess}
                             loggedInUser={loggedInUser}
                           />
                           <AlertDialog>
@@ -143,7 +146,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel onClick={() => setSearchTerm('')}>Cancel</AlertDialogCancel>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction onClick={() => handleDeleteDsc(dsc)}>
                                         Continue
                                     </AlertDialogAction>

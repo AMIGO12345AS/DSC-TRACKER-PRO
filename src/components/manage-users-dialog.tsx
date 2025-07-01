@@ -28,6 +28,8 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteUserAction } from '@/app/actions';
 import type { User } from '@/types';
 import { PlusCircle, Trash2, Edit, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
 
 interface ManageUsersDialogProps {
   users: User[];
@@ -39,6 +41,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleAddUser = () => {
     setUserToEdit(null);
@@ -54,6 +57,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
       const result = await deleteUserAction(userId);
       if (result.message.includes('successfully')) {
           toast({ title: 'Success', description: result.message });
+          router.refresh();
       } else {
           toast({ variant: 'destructive', title: 'Error', description: result.message });
       }
