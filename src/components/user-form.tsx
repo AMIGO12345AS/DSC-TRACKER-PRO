@@ -4,7 +4,7 @@ import { useEffect, useRef, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -21,6 +21,7 @@ import type { User } from '@/types';
 type UserFormProps = {
   user?: User | null;
   onSuccess: () => void;
+  onCancel: () => void;
 };
 
 const initialState = { message: undefined, errors: {} };
@@ -35,7 +36,7 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
   );
 }
 
-export function UserForm({ user, onSuccess }: UserFormProps) {
+export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditing = !!user;
@@ -84,7 +85,7 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         </div>
       </div>
       <DialogFooter>
-         <Button variant="ghost" type="button" onClick={onSuccess}>Cancel</Button>
+         <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
         <SubmitButton isEditing={isEditing} />
       </DialogFooter>
     </form>

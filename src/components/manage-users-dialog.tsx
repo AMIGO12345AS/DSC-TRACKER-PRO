@@ -154,7 +154,11 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
             </ScrollArea>
           </>
         ) : (
-           <UserForm user={userToEdit} onSuccess={handleFormSuccess} />
+           <UserForm 
+            user={userToEdit} 
+            onSuccess={handleFormSuccess} 
+            onCancel={() => setView('list')}
+           />
         )}
       </DialogContent>
     </Dialog>

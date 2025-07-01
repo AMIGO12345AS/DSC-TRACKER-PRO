@@ -57,9 +57,10 @@ export default function SetupGuide() {
                 <li>Add these fields:
                   <ul className="ml-4 mt-2 list-disc space-y-1">
                     <li>`serialNumber` (string): `SN0001`</li>
-                    <li>`issuedTo` (string): `Sample Leader`</li>
+                    <li>`description` (string): `Initial Sample DSC`</li>
                     <li>`status` (string): `storage`</li>
                     <li>`expiryDate` (timestamp): Set to a future date.</li>
+                    <li>`currentHolderId` (string): `null` (leave value blank)</li>
                     <li>`location` (map): Add two fields inside:
                         <ul className="ml-4 list-disc">
                             <li>`mainBox` (number): `1`</li>
