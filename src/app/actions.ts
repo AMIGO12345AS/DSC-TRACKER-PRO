@@ -2,12 +2,12 @@
 
 import { z } from 'zod';
 import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
-import { addUser, updateUser, deleteUser, getUsers } from '@/services/user';
+import { addUser, updateUser, deleteUser, getUsers, registerUser } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, query, runTransaction, Timestamp, writeBatch, documentId } from 'firebase/firestore';
+import { collection, doc, getDocs, query, runTransaction, Timestamp, writeBatch, documentId, limit } from 'firebase/firestore';
 import Papa from 'papaparse';
 
 
@@ -583,4 +583,46 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
     
     revalidatePath('/');
     return { success: true, message: 'DSCs imported successfully. All previous DSCs have been overwritten.' };
+}
+
+const SignUpSchema = z.object({
+  name: z.string().min(3, { message: "Name must be at least 3 characters." }),
+  email: z.string().email({ message: "Please enter a valid email." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+});
+
+type SignUpActionState = {
+  errors?: {
+    name?: string[];
+    email?: string[];
+    password?: string[];
+  };
+  message?: string;
+  success?: boolean;
+};
+
+export async function signUpAction(prevState: SignUpActionState, formData: FormData): Promise<SignUpActionState> {
+  const validatedFields = SignUpSchema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to sign up. Please check the fields.',
+      success: false,
+    };
+  }
+  
+  try {
+    await registerUser(validatedFields.data);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { message: `Sign up failed: ${errorMessage}.`, success: false };
+  }
+
+  revalidatePath('/login');
+  return { message: 'Account created successfully! You can now sign in.', success: true };
 }

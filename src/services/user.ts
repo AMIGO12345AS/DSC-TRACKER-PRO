@@ -3,7 +3,7 @@
 import { db } from '@/lib/firebase';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import type { User } from '@/types';
-import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc, setDoc, limit } from 'firebase/firestore';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -39,6 +39,7 @@ export async function getUserProfile(uid: string): Promise<User | null> {
 
 type AddUserData = Omit<User, 'id' | 'uid' | 'hasDsc'> & { email: string; password?: string };
 
+// For leaders creating users via the Manage Users dialog
 export async function addUser(userData: AddUserData) {
     const { email, password, name, role } = userData;
 
@@ -68,6 +69,55 @@ export async function addUser(userData: AddUserData) {
 
     return userRecord.uid;
 }
+
+// For public-facing registration
+export async function registerUser(userData: Omit<AddUserData, 'role'>) {
+    const { email, password, name } = userData;
+    if (!password) {
+        throw new Error("Password is required for registration.");
+    }
+    
+    // Check for existing user with this email in Auth
+    try {
+        await adminAuth.getUserByEmail(email);
+        throw new Error(`An account with the email ${email} already exists.`);
+    } catch (error: any) {
+        if (error.code !== 'auth/user-not-found') {
+            throw error; // Re-throw if it's not the "not found" error.
+        }
+    }
+    
+    const usersColRef = adminDb.collection('users');
+
+    // Check for existing user with this name in Firestore
+    const nameQuerySnapshot = await usersColRef.where("name", "==", name).get();
+    if (!nameQuerySnapshot.empty) {
+        throw new Error(`A user with the name "${name}" already exists.`);
+    }
+
+    // Determine role: first user is a leader, subsequent users are employees
+    const allUsersSnapshot = await usersColRef.limit(1).get();
+    const isFirstUser = allUsersSnapshot.empty;
+    const role = isFirstUser ? 'leader' : 'employee';
+
+    const userRecord = await adminAuth.createUser({
+        email,
+        password,
+        displayName: name,
+        emailVerified: true,
+    });
+
+    // Use set with the UID as document ID
+    await usersColRef.doc(userRecord.uid).set({
+        uid: userRecord.uid,
+        name,
+        role,
+        hasDsc: false,
+    });
+    
+    return { uid: userRecord.uid, role };
+}
+
 
 export async function updateUser(userId: string, userData: Partial<Pick<User, 'name' | 'role'>>) {
   const userDocRef = doc(db, 'users', userId);
