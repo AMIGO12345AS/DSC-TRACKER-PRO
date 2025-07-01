@@ -31,8 +31,8 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
         return { ...dsc, user };
       })
       .filter(dsc => 
-        dsc.serialNumber.toLowerCase().includes(lowercasedTerm) || 
-        dsc.description.toLowerCase().includes(lowercasedTerm) ||
+        (dsc.serialNumber && dsc.serialNumber.toLowerCase().includes(lowercasedTerm)) || 
+        (dsc.description && dsc.description.toLowerCase().includes(lowercasedTerm)) ||
         (dsc.user && dsc.user.name.toLowerCase().includes(lowercasedTerm))
       );
     
