@@ -10,21 +10,25 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
 
 interface TopLeftQuadrantProps {
   leaders: User[];
-  loggedInUser: User;
   allDscs: DSC[];
 }
 
-export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopLeftQuadrantProps) {
+export default function TopLeftQuadrant({ leaders, allDscs }: TopLeftQuadrantProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { userProfile } = useAuth();
 
-  // Find the specific DSC the logged-in user is currently holding.
-  const myDsc = loggedInUser.hasDsc
-    ? allDscs.find((dsc) => dsc.currentHolderId === loggedInUser.id && dsc.status === 'with-employee')
+  if (!userProfile) {
+    return null;
+  }
+
+  const myDsc = userProfile.hasDsc
+    ? allDscs.find((dsc) => dsc.currentHolderId === userProfile.id && dsc.status === 'with-employee')
     : null;
 
   const handleReturnDsc = async () => {
@@ -33,8 +37,8 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
     
     const payload = {
       dscId: myDsc.id,
-      actorId: loggedInUser.id,
-      actorName: loggedInUser.name,
+      actorId: userProfile.id,
+      actorName: userProfile.name,
       serialNumber: myDsc.serialNumber,
       description: myDsc.description,
     };
@@ -60,7 +64,7 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
     <div className="flex h-full flex-col gap-4">
       <Card className="flex-1">
         <CardHeader>
-          <CardTitle className="font-headline">Leadership</CardTitle>
+          <h3 className="font-headline text-2xl">Leadership</h3>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
@@ -72,7 +76,7 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">My DSC</CardTitle>
+          <h3 className="font-headline text-2xl">My DSC</h3>
         </CardHeader>
         <CardContent className="flex justify-center p-6">
           {myDsc ? (
@@ -91,7 +95,7 @@ export default function TopLeftQuadrant({ leaders, loggedInUser, allDscs }: TopL
             </div>
           ) : (
              <div className="text-sm text-muted-foreground">
-              {loggedInUser.hasDsc
+              {userProfile.hasDsc
                 ? 'Loading your DSC info...'
                 : 'You do not currently hold a DSC.'}
             </div>

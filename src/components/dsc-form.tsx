@@ -9,12 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { addDscAction, editDscAction } from '@/app/actions';
-import type { DSC, User } from '@/types';
+import type { DSC } from '@/types';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/use-auth';
 
 type DscFormProps = {
   dsc?: DSC | null;
-  loggedInUser: User;
   onSuccess: () => void;
   onCancel: () => void;
 };
@@ -31,7 +31,8 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
   );
 }
 
-export function DscForm({ dsc, loggedInUser, onSuccess, onCancel }: DscFormProps) {
+export function DscForm({ dsc, onSuccess, onCancel }: DscFormProps) {
+  const { userProfile } = useAuth();
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditing = !!dsc;
@@ -58,11 +59,15 @@ export function DscForm({ dsc, loggedInUser, onSuccess, onCancel }: DscFormProps
   
   const defaultExpiryDate = dsc?.expiryDate ? format(new Date(dsc.expiryDate), 'yyyy-MM-dd') : '';
 
+  if (!userProfile) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <form action={dispatch} ref={formRef}>
       {isEditing && <input type="hidden" name="dscId" value={dsc.id} />}
-      <input type="hidden" name="actorId" value={loggedInUser.id} />
-      <input type="hidden" name="actorName" value={loggedInUser.name} />
+      <input type="hidden" name="actorId" value={userProfile.id} />
+      <input type="hidden" name="actorName" value={userProfile.name} />
 
       <div className="grid gap-4 py-4">
         <div className="space-y-1">
@@ -100,7 +105,7 @@ export function DscForm({ dsc, loggedInUser, onSuccess, onCancel }: DscFormProps
                 defaultValue={dsc?.location.subBox}
                 placeholder="Sub Box (a-i)"
                 maxLength={1}
-                onChange={(e) => { e.target.value = e.target.value.toLowerCase(); }}
+                onChange={(e) => { e.target.value = e.target.value.toLowerCase().replace(/[^a-i]/g, ''); }}
               />
             </div>
           </div>

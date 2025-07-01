@@ -1,5 +1,6 @@
 export interface User {
-  id: string;
+  id: string; // This is the document ID from Firestore
+  uid: string; // This is the user ID from Firebase Auth
   name: string;
   role: 'leader' | 'employee';
   hasDsc: boolean; // if they currently hold the DSC
@@ -15,7 +16,7 @@ export interface DSC {
     mainBox: number;
     subBox: string; // 'a' through 'i'
   };
-  currentHolderId?: string;
+  currentHolderId?: string; // This is the Firestore document ID of the user
 }
 
 export interface AuditLog {

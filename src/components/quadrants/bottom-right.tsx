@@ -24,18 +24,19 @@ import {
 import { Button } from '../ui/button';
 import { deleteDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 interface BottomRightQuadrantProps {
   allDscs: DSC[];
   allUsers: User[];
   onHighlight: (item: { type: 'dsc' | 'employee'; id: string } | null) => void;
-  loggedInUser: User;
 }
 
-export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, loggedInUser }: BottomRightQuadrantProps) {
+export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight }: BottomRightQuadrantProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const router = useRouter();
+  const { userProfile } = useAuth();
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
@@ -58,21 +59,22 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
   }, [searchTerm, allDscs, allUsers]);
 
   const handleDeleteDsc = async (dsc: (typeof searchResults)[0]) => {
+    if (!userProfile) return;
     const payload = {
       dscId: dsc.id,
-      actorId: loggedInUser.id,
-      actorName: loggedInUser.name,
+      actorId: userProfile.id,
+      actorName: userProfile.name,
       serialNumber: dsc.serialNumber,
       description: dsc.description,
     };
     const result = await deleteDscAction(payload);
     if (result.message.includes('successfully')) {
         toast({ title: 'Success', description: result.message });
+        setSearchTerm('');
         router.refresh();
     } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
-    setSearchTerm(''); // Clear search after action
   };
 
   const handleSelect = (dsc: (typeof searchResults)[0]) => {
@@ -81,17 +83,22 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
     } else {
       onHighlight({ type: 'dsc', id: dsc.location.mainBox.toString() });
     }
+    setSearchTerm('');
   };
   
   const onEditSuccess = () => {
       setSearchTerm('');
   }
 
+  if (!userProfile) {
+    return null;
+  }
+
   return (
     <div className="flex h-full flex-col gap-4">
       <Card className="flex-1">
         <CardHeader>
-          <CardTitle className="font-headline">Live DSC Search</CardTitle>
+          <h3 className="font-headline text-2xl">Live DSC Search</h3>
         </CardHeader>
         <CardContent className="relative">
           <div className="relative">
@@ -103,7 +110,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {searchResults.length > 0 && (
+          {searchResults.length > 0 && searchTerm && (
             <Card className="absolute top-full z-10 mt-2 w-full">
               <ScrollArea className="h-auto max-h-60">
                 <CardContent className="p-2">
@@ -119,7 +126,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
                         <p className="font-semibold">{dsc.description}</p>
                         <p className="text-sm text-muted-foreground">{dsc.serialNumber} - {dsc.status === 'storage' ? `Box ${dsc.location.mainBox}` : `With ${dsc.user?.name || 'User'}`}</p>
                       </div>
-                      {loggedInUser.role === 'leader' && (
+                      {userProfile.role === 'leader' && (
                         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <ManageDscDialog
                             dsc={dsc}
@@ -129,9 +136,8 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
                               </Button>
                             }
                             onSuccess={onEditSuccess}
-                            loggedInUser={loggedInUser}
                           />
-                          <AlertDialog>
+                           <AlertDialog onOpenChange={(open) => !open && setSearchTerm(searchTerm)}>
                             <AlertDialogTrigger asChild>
                                <Button variant="ghost" size="icon" disabled={dsc.status !== 'storage'} title={dsc.status !== 'storage' ? "Cannot delete a DSC in use" : "Delete DSC"}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
@@ -146,7 +152,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogCancel onClick={() => setSearchTerm(searchTerm)}>Cancel</AlertDialogCancel>
                                     <AlertDialogAction onClick={() => handleDeleteDsc(dsc)}>
                                         Continue
                                     </AlertDialogAction>
@@ -163,13 +169,13 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight, lo
           )}
         </CardContent>
       </Card>
-      {loggedInUser.role === 'leader' && (
+      {userProfile.role === 'leader' && (
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline">Leader Actions</CardTitle>
+            <h3 className="font-headline text-2xl">Leader Actions</h3>
           </CardHeader>
           <CardContent>
-            <LeaderActions allUsers={allUsers} loggedInUser={loggedInUser} />
+            <LeaderActions allUsers={allUsers} />
           </CardContent>
         </Card>
       )}

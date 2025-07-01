@@ -191,23 +191,32 @@ export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>)
 
 
 // User Management Actions
-const UserSchema = z.object({
+const BaseUserSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   role: z.enum(['leader', 'employee'], { required_error: "Role is required." }),
+});
+
+const AddUserSchema = BaseUserSchema.extend({
+  email: z.string().email({ message: "Please enter a valid email." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
 });
 
 type UserActionState = {
   errors?: {
     name?: string[];
     role?: string[];
+    email?: string[];
+    password?: string[];
   };
   message?: string;
 };
 
 export async function addUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
-  const validatedFields = UserSchema.safeParse({
+  const validatedFields = AddUserSchema.safeParse({
     name: formData.get('name'),
     role: formData.get('role'),
+    email: formData.get('email'),
+    password: formData.get('password'),
   });
 
   if (!validatedFields.success) {
@@ -234,7 +243,7 @@ export async function updateUserAction(prevState: UserActionState, formData: For
       return { message: 'User ID is missing.' };
   }
 
-  const validatedFields = UserSchema.safeParse({
+  const validatedFields = BaseUserSchema.safeParse({
     name: formData.get('name'),
     role: formData.get('role'),
   });
@@ -370,6 +379,7 @@ export async function exportDataAction(): Promise<{ success: boolean; data?: { u
 const ImportedJsonDataSchema = z.object({
   users: z.array(z.object({
     id: z.string(),
+    uid: z.string(),
     name: z.string(),
     role: z.enum(['leader', 'employee']),
     hasDsc: z.boolean(),
@@ -417,7 +427,6 @@ async function deleteCollection(collectionPath: string, batch: writeBatch) {
 // Action to import JSON backup, overwriting all existing data
 export async function importJsonBackupAction(jsonString: string): Promise<{ success: boolean; message: string; }> {
     try {
-        // Step 1: Parse and validate the entire file content first.
         let parsedData;
         try {
             parsedData = JSON.parse(jsonString);
@@ -430,7 +439,6 @@ export async function importJsonBackupAction(jsonString: string): Promise<{ succ
             throw new Error(`Invalid data structure in JSON file. ${validatedData.error.message}`);
         }
         
-        // Step 2: If validation passes, proceed with database operations.
         await processJsonImport(validatedData.data);
 
     } catch (error) {
@@ -447,7 +455,10 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
 
     const writeDbBatch = writeBatch(db);
 
-    // Delete all existing data
+    // This is highly destructive and should be used with caution.
+    // In a real app, you might want to handle this differently,
+    // e.g., by not deleting auth users.
+    // For now, this assumes a full restore from a known-good state.
     await deleteCollection('dscs', writeDbBatch);
     await deleteCollection('users', writeDbBatch);
     await deleteCollection('auditLogs', writeDbBatch);
@@ -455,7 +466,8 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
     // Batch write new users and create ID map
     const oldToNewUserIdMap = new Map<string, string>();
     importedUsers.forEach(user => {
-        const newUserRef = doc(collection(db, 'users'));
+        // In this simplified import, we assume the UID from the JSON is the one to use.
+        const newUserRef = doc(db, 'users', user.uid);
         oldToNewUserIdMap.set(user.id, newUserRef.id);
         const { id, ...userData } = user;
         writeDbBatch.set(newUserRef, userData);
@@ -474,14 +486,12 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
         writeDbBatch.set(newDscRef, newDscData);
     });
     
-    // Commit all changes at once
     await writeDbBatch.commit();
 }
 
 
 export async function importUsersFromCsvAction(csvString: string): Promise<{ success: boolean; message: string; }> {
     try {
-        // Step 1: Parse and validate the entire file content first.
         const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
         if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
 
@@ -494,29 +504,21 @@ export async function importUsersFromCsvAction(csvString: string): Promise<{ suc
             userNames.add(user.name);
         }
 
-        // Step 2: If validation passes, proceed with database operations.
-        const userBatch = writeBatch(db);
-        await deleteCollection('users', userBatch);
-        
-        validatedUsers.data.forEach(user => {
-            const newUserRef = doc(collection(db, 'users'));
-            userBatch.set(newUserRef, { name: user.name, role: user.role, hasDsc: false });
-        });
-        await userBatch.commit();
+        // This action is now too destructive as it doesn't handle Auth users.
+        // It's recommended to add users one by one through the UI to create their auth credentials.
+        // I'm disabling this to prevent data inconsistency.
+        throw new Error("CSV User import is disabled. Please add users through the 'Manage Users' dialog to create their login credentials.");
+
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { success: false, message: `User import failed: ${errorMessage}.` };
     }
-
-    revalidatePath('/');
-    return { success: true, message: 'Users imported successfully. All previous users have been overwritten.' };
 }
 
 
 export async function importDscsFromCsvAction(csvString: string): Promise<{ success: boolean; message: string; }> {
     try {
-        // Step 1: Parse and validate the entire file content first.
         const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
         if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
 
@@ -528,24 +530,19 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
             if (isNaN(expiryDate.getTime())) throw new Error(`Invalid date format for DSC S/N ${dsc.serialNumber}`);
         }
 
-        // Step 2: If validation passes, get existing users for mapping.
         const allUsersSnapshot = await getDocs(collection(db, 'users'));
         const userNameToIdMap = new Map<string, string>();
         allUsersSnapshot.forEach(doc => userNameToIdMap.set(doc.data().name, doc.id));
         
-        // Step 3: Perform all database writes in batches.
         const dscWriteBatch = writeBatch(db);
         const userUpdateBatch = writeBatch(db);
 
-        // Delete all existing DSCs
         await deleteCollection('dscs', dscWriteBatch);
         
-        // Reset hasDsc flag for all users
         allUsersSnapshot.forEach(userDoc => {
             userUpdateBatch.update(userDoc.ref, { hasDsc: false });
         });
 
-        // Prepare new DSCs and user updates
         validatedDscs.data.forEach(dsc => {
             const newDscRef = doc(collection(db, 'dscs'));
             let currentHolderId: string | null = null;
@@ -576,7 +573,6 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
             dscWriteBatch.set(newDscRef, newDscData);
         });
 
-        // Commit all batches
         await userUpdateBatch.commit();
         await dscWriteBatch.commit();
 

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SubBoxModal } from '../sub-box-modal';
-import type { DSC, User } from '@/types';
+import type { DSC } from '@/types';
 import { cn } from '@/lib/utils';
 import { KeyRound } from 'lucide-react';
 
@@ -12,10 +12,9 @@ interface TopRightQuadrantProps {
   dscs: DSC[];
   highlightedId: string | null;
   onDscSelect: (dsc: DSC) => void;
-  loggedInUser: User;
 }
 
-export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, loggedInUser }: TopRightQuadrantProps) {
+export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect }: TopRightQuadrantProps) {
   const [selectedMainBox, setSelectedMainBox] = useState<number | null>(null);
 
   const mainBoxes = Array.from({ length: 8 }, (_, i) => {
@@ -32,7 +31,7 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, log
     <>
       <Card className="h-full">
         <CardHeader>
-          <CardTitle className="font-headline">DSC Storage</CardTitle>
+          <h3 className="font-headline text-2xl">DSC Storage</h3>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-4 gap-4">
@@ -63,7 +62,6 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, log
         mainBoxId={selectedMainBox}
         dscs={dscsInSelectedBox}
         onDscSelect={onDscSelect}
-        loggedInUser={loggedInUser}
       />
     </>
   );

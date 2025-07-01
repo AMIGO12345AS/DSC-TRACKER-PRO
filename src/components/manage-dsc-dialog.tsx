@@ -10,16 +10,15 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { DscForm } from './dsc-form';
-import type { DSC, User } from '@/types';
+import type { DSC } from '@/types';
 
 interface ManageDscDialogProps {
   dsc?: DSC | null;
   trigger: React.ReactNode;
-  loggedInUser: User;
   onSuccess?: () => void;
 }
 
-export function ManageDscDialog({ dsc, trigger, loggedInUser, onSuccess }: ManageDscDialogProps) {
+export function ManageDscDialog({ dsc, trigger, onSuccess }: ManageDscDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSuccess = () => {
@@ -34,16 +33,15 @@ export function ManageDscDialog({ dsc, trigger, loggedInUser, onSuccess }: Manag
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="font-headline">
+          <h3 className="font-headline text-lg">
             {isEditing ? 'Edit Digital Signature Certificate' : 'Add New Digital Signature Certificate'}
-          </DialogTitle>
+          </h3>
           <DialogDescription>
             {isEditing ? 'Update the details for this DSC.' : 'Enter the details for the new DSC and assign it to a physical location.'}
           </DialogDescription>
         </DialogHeader>
         <DscForm 
             dsc={dsc}
-            loggedInUser={loggedInUser}
             onSuccess={handleSuccess}
             onCancel={() => setIsOpen(false)}
         />

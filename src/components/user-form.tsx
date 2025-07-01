@@ -66,10 +66,26 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       {isEditing && <input type="hidden" name="userId" value={user.id} />}
       <div className="grid gap-4 py-4">
         <div className="space-y-1">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">Full Name</Label>
           <Input id="name" name="name" defaultValue={user?.name ?? ''} />
           {state?.errors?.name && <p className="text-sm text-destructive">{state.errors.name.join(', ')}</p>}
         </div>
+
+        {!isEditing && (
+          <>
+            <div className="space-y-1">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" placeholder="user@example.com" />
+              {state?.errors?.email && <p className="text-sm text-destructive">{state.errors.email.join(', ')}</p>}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="password">Temporary Password</Label>
+              <Input id="password" name="password" type="password" />
+              {state?.errors?.password && <p className="text-sm text-destructive">{state.errors.password.join(', ')}</p>}
+            </div>
+          </>
+        )}
+
         <div className="space-y-1">
           <Label htmlFor="role">Role</Label>
           <Select name="role" defaultValue={user?.role ?? 'employee'}>

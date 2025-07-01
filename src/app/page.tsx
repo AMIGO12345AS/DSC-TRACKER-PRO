@@ -12,9 +12,11 @@ function DashboardSkeleton() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-2 ml-8">
             <Skeleton className="h-8 w-32" />
-          <div className="flex flex-1 items-center justify-end space-x-4">
+          </div>
+          <div className="flex items-center mr-8">
             <Skeleton className="h-10 w-10 rounded-full" />
           </div>
         </div>
@@ -27,7 +29,7 @@ function DashboardSkeleton() {
           <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
         </div>
       </main>
-    </div>
+    </div>>
   )
 }
 
@@ -61,8 +63,6 @@ function ErrorDisplay({ message }: { message: string }) {
 
 async function DashboardData() {
   try {
-    // This will attempt to create the collections and add sample data if the DB is empty
-    // and a service account key is provided. It will not crash if it fails.
     await ensureDatabaseSeeded();
 
     const [users, dscs] = await Promise.all([
@@ -70,7 +70,6 @@ async function DashboardData() {
       getDscs()
     ]);
     
-    // If the database is still empty after the seed attempt, show the setup guide.
     if (users.length === 0) {
       return <SetupGuide />;
     }

@@ -9,26 +9,34 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { KeyIcon } from './icons';
 import { NotificationSettingsDialog } from './settings/notification-settings-dialog';
 import type { User } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
-interface HeaderProps {
-  allUsers: User[];
-  loggedInUser: User;
-  onUserChange: (user: User) => void;
-}
+export function Header() {
+  const { user, userProfile } = useAuth();
+  const router = useRouter();
 
-export function Header({ allUsers, loggedInUser, onUserChange }: HeaderProps) {
-  const isLeader = loggedInUser.role === 'leader';
-  const initial = loggedInUser.name ? loggedInUser.name.charAt(0).toUpperCase() : '?';
+  const handleLogout = async () => {
+    await signOut(auth);
+    // Clear cookie for middleware
+    document.cookie = 'firebaseIdToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    router.push('/login');
+  };
+
+  if (!user || !userProfile) {
+    return null; // Or a skeleton loader
+  }
+
+  const isLeader = userProfile.role === 'leader';
+  const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : '?';
   
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -62,33 +70,13 @@ export function Header({ allUsers, loggedInUser, onUserChange }: HeaderProps) {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{loggedInUser.name}</p>
+                    <p className="text-sm font-medium leading-none">{userProfile.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {loggedInUser.name.toLowerCase().replace(' ', '.')}@certitrack.app
+                      {user.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Switch User</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                        <DropdownMenuSubContent>
-                            {allUsers.map((user) => (
-                                <DropdownMenuItem key={user.id} onClick={() => onUserChange(user)}>
-                                    {user.id === loggedInUser.id ? (
-                                        <Check className="mr-2 h-4 w-4" />
-                                    ) : (
-                                        <span className="mr-2 h-4 w-4" /> 
-                                    )}
-                                    <span>{user.name} ({user.role})</span>
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
                 {isLeader && (
                   <NotificationSettingsDialog>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -97,7 +85,7 @@ export function Header({ allUsers, loggedInUser, onUserChange }: HeaderProps) {
                     </DropdownMenuItem>
                   </NotificationSettingsDialog>
                 )}
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
