@@ -2,9 +2,8 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, limit } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { getUserProfile } from '@/services/user';
 import type { User as UserProfile } from '@/types';
 
 interface AuthContextType {
@@ -28,25 +27,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        // Now also listen for realtime updates on the user's profile
-        const profileDocRef = doc(db, 'users', firebaseUser.uid);
-        const unsubscribeProfile = onSnapshot(profileDocRef, (doc) => {
-          if (doc.exists()) {
-             const data = doc.data();
-             setUserProfile({
-                id: doc.id,
-                uid: firebaseUser.uid,
-                name: data.name,
-                role: data.role,
-                hasDsc: data.hasDsc
-             } as UserProfile);
-          } else {
-            // This can happen if the user is deleted from Firestore but not Auth
+        // Query for the user document where the 'uid' field matches the authenticated user's UID.
+        // This is more robust than assuming the document ID is the UID.
+        const usersQuery = query(collection(db, 'users'), where('uid', '==', firebaseUser.uid), limit(1));
+        
+        const unsubscribeProfile = onSnapshot(usersQuery, (querySnapshot) => {
+            if (!querySnapshot.empty) {
+                const userDoc = querySnapshot.docs[0];
+                const data = userDoc.data();
+                setUserProfile({
+                    id: userDoc.id,
+                    uid: data.uid,
+                    name: data.name,
+                    role: data.role,
+                    hasDsc: data.hasDsc
+                } as UserProfile);
+            } else {
+                console.warn(`Firestore profile not found for authenticated user ${firebaseUser.uid}`);
+                setUserProfile(null);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error("Error listening to user profile:", error);
             setUserProfile(null);
-          }
-           setLoading(false);
+            setLoading(false);
         });
+
         return () => unsubscribeProfile();
+
       } else {
         setUserProfile(null);
         setLoading(false);
