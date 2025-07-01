@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { User } from 'lucide-react';
 import { KeyIcon } from './icons';
 
 interface UserCardProps {
@@ -14,6 +13,9 @@ interface UserCardProps {
 }
 
 export function UserCard({ user, isHighlighted = false }: UserCardProps) {
+  const initial = user.name ? user.name.charAt(0).toUpperCase() : '?';
+  const isLeader = user.role === 'leader';
+
   return (
     <Card
       className={cn(
@@ -23,9 +25,15 @@ export function UserCard({ user, isHighlighted = false }: UserCardProps) {
     >
       <CardContent className="flex items-center gap-3 p-3">
         <Avatar className="h-10 w-10">
-          <AvatarImage src={`https://placehold.co/100x100.png`} data-ai-hint="person portrait" />
-          <AvatarFallback>
-            <User />
+          <AvatarFallback
+            className={cn(
+              'font-semibold',
+              isLeader
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-secondary-foreground'
+            )}
+          >
+            {initial}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 overflow-hidden">

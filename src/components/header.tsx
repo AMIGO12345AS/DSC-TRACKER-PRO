@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, LogOut, User as UserIcon, Users, Check } from 'lucide-react';
+import { Settings, LogOut, Users, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,10 +14,11 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { KeyIcon } from './icons';
 import { NotificationSettingsDialog } from './settings/notification-settings-dialog';
 import type { User } from '@/types';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   allUsers: User[];
@@ -27,6 +28,7 @@ interface HeaderProps {
 
 export function Header({ allUsers, loggedInUser, onUserChange }: HeaderProps) {
   const isLeader = loggedInUser.role === 'leader';
+  const initial = loggedInUser.name ? loggedInUser.name.charAt(0).toUpperCase() : '?';
   
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -44,9 +46,15 @@ export function Header({ allUsers, loggedInUser, onUserChange }: HeaderProps) {
                   className="relative h-10 w-10 rounded-full"
                 >
                   <Avatar>
-                    <AvatarImage src={`https://placehold.co/100x100.png`} data-ai-hint="person portrait" alt={loggedInUser.name} />
-                    <AvatarFallback>
-                      <UserIcon />
+                    <AvatarFallback
+                      className={cn(
+                        'font-semibold',
+                        isLeader
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-secondary-foreground'
+                      )}
+                    >
+                      {initial}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
