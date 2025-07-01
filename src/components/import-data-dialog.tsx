@@ -7,9 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
   DialogTrigger,
-  DialogClose
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -28,116 +26,42 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Loader2, Upload, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { importDataAction } from '@/app/actions';
+import { importJsonBackupAction, importUsersFromCsvAction, importDscsFromCsvAction } from '@/app/actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface ImportDataDialogProps {
     trigger: React.ReactNode;
 }
 
+const USER_CSV_TEMPLATE = 'name,role\nJohn Doe,employee\nJane Smith,leader';
+const DSC_CSV_TEMPLATE = 'serialNumber,description,expiryDate (YYYY-MM-DD),currentHolderName,locationMainBox,locationSubBox\nSN001,Finance DSC,2025-12-31,John Doe,1,a';
+
+
 export function ImportDataDialog({ trigger }: ImportDataDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
-    const [fileContent, setFileContent] = useState<string | null>(null);
-    const [fileName, setFileName] = useState('');
-    const [fileType, setFileType] = useState<'json' | 'csv' | null>(null);
-    const { toast } = useToast();
-    const jsonInputRef = useRef<HTMLInputElement>(null);
-    const csvInputRef = useRef<HTMLInputElement>(null);
-    
-    const CSV_TEMPLATE_HEADERS = ['type', 'name', 'role', 'serialNumber', 'description', 'expiryDate (YYYY-MM-DD)', 'currentHolderName', 'locationMainBox', 'locationSubBox'];
+    const [activeTab, setActiveTab] = useState('users');
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: 'json' | 'csv') => {
-        const file = event.target.files?.[0];
-        if (file) {
-            setFileName(file.name);
-            setFileType(type);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target?.result;
-                if (typeof text === 'string') {
-                    setFileContent(text);
-                } else {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Invalid File',
-                        description: 'Could not read the file content.',
-                    });
-                    setFileContent(null);
-                    setFileName('');
-                    setFileType(null);
-                }
-            };
-            reader.onerror = () => {
-                 toast({
-                    variant: 'destructive',
-                    title: 'File Read Error',
-                    description: 'There was an error reading the selected file.',
-                });
-                setFileContent(null);
-                setFileName('');
-                setFileType(null);
-            }
-            reader.readAsText(file);
+    const handleOpenChange = (open: boolean) => {
+        if (!open) {
+            // Reset state on close
+            setIsImporting(false);
         }
-    };
+        setIsOpen(open);
+    }
     
-    const handleDownloadTemplate = () => {
-        const csvContent = CSV_TEMPLATE_HEADERS.join(',') + '\n';
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const handleDownloadTemplate = (type: 'user' | 'dsc') => {
+        const content = type === 'user' ? USER_CSV_TEMPLATE : DSC_CSV_TEMPLATE;
+        const filename = type === 'user' ? 'users-import-template.csv' : 'dscs-import-template.csv';
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.setAttribute('href', url);
-        link.setAttribute('download', 'certitrack-import-template.csv');
+        link.setAttribute('download', filename);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-    }
-
-    const handleImport = async () => {
-        if (!fileContent || !fileType) {
-            toast({ variant: 'destructive', title: 'No file selected' });
-            return;
-        }
-
-        setIsImporting(true);
-        const result = await importDataAction(fileContent, fileType);
-
-        if (result.success) {
-            toast({
-                title: 'Import Successful',
-                description: 'Your data has been imported and applied.',
-            });
-            setIsOpen(false);
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Import Failed',
-                description: result.message || 'An unknown error occurred during import.',
-            });
-        }
-        
-        // Reset state regardless of outcome
-        setIsImporting(false);
-        setFileContent(null);
-        setFileName('');
-        setFileType(null);
-        if(jsonInputRef.current) jsonInputRef.current.value = '';
-        if(csvInputRef.current) csvInputRef.current.value = '';
-    };
-    
-    const handleOpenChange = (open: boolean) => {
-        if (!open) {
-            // Reset state on close
-            setFileContent(null);
-            setFileName('');
-            setFileType(null);
-            setIsImporting(false);
-            if(jsonInputRef.current) jsonInputRef.current.value = '';
-            if(csvInputRef.current) csvInputRef.current.value = '';
-        }
-        setIsOpen(open);
     }
 
     return (
@@ -147,83 +71,164 @@ export function ImportDataDialog({ trigger }: ImportDataDialogProps) {
                 <DialogHeader>
                     <DialogTitle className="font-headline">Import Data</DialogTitle>
                     <DialogDescription>
-                       Import data from a JSON backup file or a CSV file. This will overwrite all existing data.
+                       Import Users or DSCs from a CSV file, or restore a full backup from JSON.
                     </DialogDescription>
                 </DialogHeader>
 
-                <Tabs defaultValue="json" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="json">From JSON</TabsTrigger>
-                        <TabsTrigger value="csv">From CSV</TabsTrigger>
+                <Tabs defaultValue="users" onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="users">Users (CSV)</TabsTrigger>
+                        <TabsTrigger value="dscs">DSCs (CSV)</TabsTrigger>
+                        <TabsTrigger value="json">JSON Backup</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="json">
-                        <div className="space-y-4 py-4">
-                           <Alert variant="destructive">
-                                <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>Warning: Destructive Action</AlertTitle>
-                                <AlertDescription>
-                                    Importing data will completely **delete all current users and DSCs** before adding the new data. This action cannot be undone.
-                                </AlertDescription>
-                            </Alert>
-
-                            <div className="grid w-full max-w-sm items-center gap-1.5">
-                                <Label htmlFor="json-file">JSON Backup File</Label>
-                                <Input id="json-file" type="file" accept=".json" onChange={(e) => handleFileChange(e, 'json')} ref={jsonInputRef} />
-                            </div>
-                            {fileName && fileType === 'json' && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
-                        </div>
+                    
+                    <TabsContent value="users">
+                        <ImportTabContent
+                            title="Import Users via CSV"
+                            description="This will permanently delete all current users and replace them with the data from the CSV file. DSCs and Audit Logs will not be affected."
+                            fileType="text/csv"
+                            onDownloadTemplate={() => handleDownloadTemplate('user')}
+                            templateFilename="users-import-template.csv"
+                            importAction={importUsersFromCsvAction}
+                            isImporting={isImporting}
+                            setIsImporting={setIsImporting}
+                            onSuccess={() => setIsOpen(false)}
+                            confirmationMessage="This will permanently delete all existing users."
+                        />
                     </TabsContent>
-                    <TabsContent value="csv">
-                         <div className="space-y-4 py-4">
-                            <Alert>
-                                <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>CSV Import Guide</AlertTitle>
-                                <AlertDescription>
-                                    Use a single CSV file with a `type` column (`user` or `dsc`) for each row. Relationships are handled via `currentHolderName`.
-                                    <Button variant="link" size="sm" className="p-0 h-auto mt-1" onClick={handleDownloadTemplate}>
-                                        <Download className="mr-2" />
-                                        Download CSV Template
-                                    </Button>
-                                </AlertDescription>
-                            </Alert>
-                             <div className="grid w-full max-w-sm items-center gap-1.5">
-                                <Label htmlFor="csv-file">CSV File</Label>
-                                <Input id="csv-file" type="file" accept=".csv" onChange={(e) => handleFileChange(e, 'csv')} ref={csvInputRef}/>
-                            </div>
-                            {fileName && fileType === 'csv' && <p className="text-sm text-muted-foreground">Selected file: {fileName}</p>}
-                        </div>
+                    
+                    <TabsContent value="dscs">
+                        <ImportTabContent
+                            title="Import DSCs via CSV"
+                            description="This will permanently delete all current DSCs and replace them with the data from the CSV file. Users and Audit Logs will not be affected."
+                            fileType="text/csv"
+                            onDownloadTemplate={() => handleDownloadTemplate('dsc')}
+                            templateFilename="dscs-import-template.csv"
+                            importAction={importDscsFromCsvAction}
+                            isImporting={isImporting}
+                            setIsImporting={setIsImporting}
+                            onSuccess={() => setIsOpen(false)}
+                            confirmationMessage="This will permanently delete all existing DSCs."
+                        />
+                    </TabsContent>
+
+                    <TabsContent value="json">
+                        <ImportTabContent
+                            title="Restore from JSON Backup"
+                            description="This will permanently delete all current users, DSCs, and audit logs, replacing them with the data from the JSON backup file. This action cannot be undone."
+                            fileType="application/json"
+                            importAction={importJsonBackupAction}
+                            isImporting={isImporting}
+                            setIsImporting={setIsImporting}
+                            onSuccess={() => setIsOpen(false)}
+                            confirmationMessage="This will permanently delete all existing data in the database (users, DSCs, and audit logs)."
+                        />
                     </TabsContent>
                 </Tabs>
-
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="ghost">Cancel</Button>
-                    </DialogClose>
-                     <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                             <Button disabled={!fileContent || isImporting}>
-                                {isImporting ? <Loader2 className="animate-spin" /> : <Upload />}
-                                Import Data
-                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                              <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-
-                                  <AlertDialogDescription>
-                                      This action will permanently delete all existing data in the database and replace it with the content of the selected file. This cannot be undone.
-                                  </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={handleImport}>
-                                      Yes, Overwrite Everything
-                                  </AlertDialogAction>
-                              </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
     )
+}
+
+
+interface ImportTabContentProps {
+    title: string;
+    description: string;
+    fileType: string;
+    onDownloadTemplate?: () => void;
+    templateFilename?: string;
+    importAction: (fileContent: string) => Promise<{ success: boolean; message: string; }>;
+    isImporting: boolean;
+    setIsImporting: (isImporting: boolean) => void;
+    onSuccess: () => void;
+    confirmationMessage: string;
+}
+
+function ImportTabContent({ title, description, fileType, onDownloadTemplate, templateFilename, importAction, isImporting, setIsImporting, onSuccess, confirmationMessage }: ImportTabContentProps) {
+    const [fileContent, setFileContent] = useState<string | null>(null);
+    const [fileName, setFileName] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast();
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setFileName(file.name);
+            const reader = new FileReader();
+            reader.onload = (e) => setFileContent(e.target?.result as string);
+            reader.onerror = () => toast({ variant: 'destructive', title: 'File Read Error' });
+            reader.readAsText(file);
+        }
+    };
+    
+    const resetState = () => {
+        setFileContent(null);
+        setFileName('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+
+    const handleImport = async () => {
+        if (!fileContent) {
+            toast({ variant: 'destructive', title: 'No file selected' });
+            return;
+        }
+        setIsImporting(true);
+        const result = await importAction(fileContent);
+
+        if (result.success) {
+            toast({ title: 'Import Successful', description: result.message });
+            onSuccess();
+        } else {
+            toast({ variant: 'destructive', title: 'Import Failed', description: result.message, duration: 8000 });
+        }
+        
+        setIsImporting(false);
+        resetState();
+    };
+
+    return (
+        <div className="space-y-4 py-4">
+            <Alert variant={title.includes("JSON") ? 'destructive' : 'default'}>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>{title}</AlertTitle>
+                <AlertDescription>
+                    {description}
+                    {onDownloadTemplate && (
+                         <Button variant="link" size="sm" className="p-0 h-auto mt-1" onClick={onDownloadTemplate}>
+                            <Download className="mr-2" />
+                            Download Template
+                        </Button>
+                    )}
+                </AlertDescription>
+            </Alert>
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor={`file-upload-${title}`}>{fileName || 'Select file'}</Label>
+                <Input id={`file-upload-${title}`} type="file" accept={fileType} onChange={handleFileChange} ref={fileInputRef} />
+            </div>
+             <div className="flex justify-end pt-4">
+                 <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                         <Button disabled={!fileContent || isImporting}>
+                            {isImporting ? <Loader2 className="animate-spin" /> : <Upload />}
+                            Import Data
+                         </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {confirmationMessage} This action cannot be undone.
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleImport}>
+                                  Yes, Overwrite
+                              </AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+            </div>
+        </div>
+    );
 }

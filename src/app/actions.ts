@@ -7,7 +7,7 @@ import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, query, runTransaction, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, query, runTransaction, Timestamp, writeBatch, documentId } from 'firebase/firestore';
 import Papa from 'papaparse';
 
 
@@ -389,14 +389,12 @@ const ImportedJsonDataSchema = z.object({
 });
 
 // Zod schemas for imported CSV data
-const CsvUserSchema = z.object({
-  type: z.literal('user'),
+const CsvUserImportSchema = z.object({
   name: z.string().min(1, { message: 'User name is required.' }),
   role: z.enum(['leader', 'employee'], { errorMap: () => ({ message: 'Role must be leader or employee.' }) }),
 });
 
-const CsvDscSchema = z.object({
-  type: z.literal('dsc'),
+const CsvDscImportSchema = z.object({
   serialNumber: z.string().min(1, { message: 'DSC serial number is required.' }),
   description: z.string().min(1, { message: 'DSC description is required.' }),
   'expiryDate (YYYY-MM-DD)': z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Expiry date must be in YYYY-MM-DD format.' }),
@@ -425,32 +423,21 @@ async function deleteCollection(collectionPath: string) {
     await Promise.all(batches);
 }
 
-// Action to import data, overwriting existing data
-export async function importDataAction(fileContent: string, fileType: 'json' | 'csv'): Promise<{ success: boolean; message: string; }> {
+// Action to import JSON backup, overwriting all existing data
+export async function importJsonBackupAction(jsonString: string): Promise<{ success: boolean; message: string; }> {
     try {
-        // 1. Delete all existing data first
         await deleteCollection('dscs');
         await deleteCollection('users');
         await deleteCollection('auditLogs');
-
-        // 2. Process based on file type
-        if (fileType === 'json') {
-            await processJsonImport(fileContent);
-        } else if (fileType === 'csv') {
-            await processCsvImport(fileContent);
-        } else {
-            return { success: false, message: 'Unsupported file type.' };
-        }
-
+        await processJsonImport(jsonString);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { success: false, message: `Import failed: ${errorMessage}.` };
     }
     
     revalidatePath('/');
-    return { success: true, message: 'Data imported successfully.' };
+    return { success: true, message: 'JSON backup imported successfully. All previous data has been overwritten.' };
 }
-
 
 async function processJsonImport(jsonString: string) {
     let parsedData;
@@ -494,89 +481,107 @@ async function processJsonImport(jsonString: string) {
     await dscBatch.commit();
 }
 
-async function processCsvImport(csvString: string) {
-    const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
-    
-    if (parsedCsv.errors.length > 0) {
-        throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
-    }
 
-    const rows = parsedCsv.data;
-    const usersFromCsv = rows.filter((row: any) => row.type === 'user');
-    const dscsFromCsv = rows.filter((row: any) => row.type === 'dsc');
-    
-    // Validate users
-    const validatedUsers = z.array(CsvUserSchema).safeParse(usersFromCsv);
-    if (!validatedUsers.success) {
-        throw new Error(`Invalid user data in CSV: ${validatedUsers.error.errors[0].message}`);
-    }
-    
-    // Pre-flight check for duplicate user names in the CSV file
-    const userNames = new Set<string>();
-    for (const user of validatedUsers.data) {
-        if (userNames.has(user.name)) {
-            throw new Error(`Duplicate user name found in CSV file: "${user.name}". User names must be unique.`);
+export async function importUsersFromCsvAction(csvString: string): Promise<{ success: boolean; message: string; }> {
+    try {
+        const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
+        if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
+
+        const validatedUsers = z.array(CsvUserImportSchema).safeParse(parsedCsv.data);
+        if (!validatedUsers.success) throw new Error(`Invalid user data in CSV: ${validatedUsers.error.errors[0].message}`);
+
+        const userNames = new Set<string>();
+        for (const user of validatedUsers.data) {
+            if (userNames.has(user.name)) throw new Error(`Duplicate user name found in CSV file: "${user.name}". User names must be unique.`);
+            userNames.add(user.name);
         }
-        userNames.add(user.name);
-    }
 
-
-    // Validate DSCs
-    const validatedDscs = z.array(CsvDscSchema).safeParse(dscsFromCsv);
-     if (!validatedDscs.success) {
-        throw new Error(`Invalid DSC data in CSV: ${validatedDscs.error.errors[0].message}`);
-    }
-
-    // Process users and create a name-to-ID map
-    const userNameToNewId = new Map<string, string>();
-    const userBatch = writeBatch(db);
-    validatedUsers.data.forEach(user => {
-        const newUserRef = doc(collection(db, 'users'));
-        userNameToNewId.set(user.name, newUserRef.id);
-        userBatch.set(newUserRef, { name: user.name, role: user.role, hasDsc: false });
-    });
-    await userBatch.commit();
-
-    // Process DSCs
-    const dscBatch = writeBatch(db);
-    const userUpdateBatch = writeBatch(db);
-
-    validatedDscs.data.forEach(dsc => {
-        const newDscRef = doc(collection(db, 'dscs'));
-        let currentHolderId: string | null = null;
-        let status: 'storage' | 'with-employee' = 'storage';
+        await deleteCollection('users');
         
-        if (dsc.currentHolderName && userNameToNewId.has(dsc.currentHolderName)) {
-            currentHolderId = userNameToNewId.get(dsc.currentHolderName)!;
-            status = 'with-employee';
+        const userBatch = writeBatch(db);
+        validatedUsers.data.forEach(user => {
+            const newUserRef = doc(collection(db, 'users'));
+            userBatch.set(newUserRef, { name: user.name, role: user.role, hasDsc: false });
+        });
+        await userBatch.commit();
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `User import failed: ${errorMessage}.` };
+    }
+
+    revalidatePath('/');
+    return { success: true, message: 'Users imported successfully. All previous users have been overwritten.' };
+}
+
+
+export async function importDscsFromCsvAction(csvString: string): Promise<{ success: boolean; message: string; }> {
+    try {
+        const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
+        if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
+
+        const validatedDscs = z.array(CsvDscImportSchema).safeParse(parsedCsv.data);
+        if (!validatedDscs.success) throw new Error(`Invalid DSC data in CSV: ${validatedDscs.error.errors[0].message}`);
+
+        // Get all users to create a name-to-ID map
+        const allUsersSnapshot = await getDocs(collection(db, 'users'));
+        const userNameToIdMap = new Map<string, string>();
+        allUsersSnapshot.forEach(doc => userNameToIdMap.set(doc.data().name, doc.id));
+        
+        // Reset hasDsc flag for all users
+        const resetUserBatch = writeBatch(db);
+        allUsersSnapshot.forEach(userDoc => {
+            resetUserBatch.update(userDoc.ref, { hasDsc: false });
+        });
+        await resetUserBatch.commit();
+        
+        // Delete all existing DSCs
+        await deleteCollection('dscs');
+
+        // Batch write new DSCs and update user `hasDsc` flag
+        const dscBatch = writeBatch(db);
+        const userUpdateBatch = writeBatch(db);
+
+        validatedDscs.data.forEach(dsc => {
+            const newDscRef = doc(collection(db, 'dscs'));
+            let currentHolderId: string | null = null;
+            let status: 'storage' | 'with-employee' = 'storage';
             
-            // Mark the user as having a DSC
-            const userRef = doc(db, 'users', currentHolderId);
-            userUpdateBatch.update(userRef, { hasDsc: true });
-        }
-        
-        const expiryDate = new Date(dsc['expiryDate (YYYY-MM-DD)']);
-        if (isNaN(expiryDate.getTime())) {
-            throw new Error(`Invalid date format for DSC S/N ${dsc.serialNumber}`);
-        }
+            if (dsc.currentHolderName) {
+                if (userNameToIdMap.has(dsc.currentHolderName)) {
+                    currentHolderId = userNameToIdMap.get(dsc.currentHolderName)!;
+                    status = 'with-employee';
+                    const userRef = doc(db, 'users', currentHolderId);
+                    userUpdateBatch.update(userRef, { hasDsc: true });
+                } else {
+                    // Optionally handle cases where the user in the CSV doesn't exist
+                    console.warn(`User "${dsc.currentHolderName}" for DSC S/N ${dsc.serialNumber} not found. Storing DSC without a holder.`);
+                }
+            }
+            
+            const expiryDate = new Date(dsc['expiryDate (YYYY-MM-DD)']);
+            if (isNaN(expiryDate.getTime())) throw new Error(`Invalid date format for DSC S/N ${dsc.serialNumber}`);
 
-        const location = {
-            mainBox: dsc.locationMainBox ?? 1,
-            subBox: dsc.locationSubBox ?? 'a'
-        };
+            const newDscData = {
+                serialNumber: dsc.serialNumber,
+                description: dsc.description,
+                expiryDate: Timestamp.fromDate(expiryDate),
+                status,
+                currentHolderId,
+                location: { mainBox: dsc.locationMainBox ?? 1, subBox: dsc.locationSubBox ?? 'a' }
+            };
 
-        const newDscData = {
-            serialNumber: dsc.serialNumber,
-            description: dsc.description,
-            expiryDate: Timestamp.fromDate(expiryDate),
-            status,
-            currentHolderId,
-            location
-        };
+            dscBatch.set(newDscRef, newDscData);
+        });
 
-        dscBatch.set(newDscRef, newDscData);
-    });
+        await dscBatch.commit();
+        await userUpdateBatch.commit();
 
-    await dscBatch.commit();
-    await userUpdateBatch.commit();
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `DSC import failed: ${errorMessage}.` };
+    }
+    
+    revalidatePath('/');
+    return { success: true, message: 'DSCs imported successfully. All previous DSCs have been overwritten.' };
 }
