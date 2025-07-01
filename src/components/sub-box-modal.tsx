@@ -120,8 +120,8 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect, log
                 ) : (
                     <>
                         <h3 className="font-semibold mb-2">Sub-box {selectedSubBox.toUpperCase()}</h3>
-                        <ScrollArea className="h-[240px] flex-grow pr-3">
-                            <div className="space-y-1 text-left py-1">
+                        <ScrollArea className="h-[240px] flex-grow">
+                            <div className="space-y-1 text-left p-2">
                                 {dscsInSelectedSubBox.map((dsc) => (
                                     <div
                                         key={dsc.id}
