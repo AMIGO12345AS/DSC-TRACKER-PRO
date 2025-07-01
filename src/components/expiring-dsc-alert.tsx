@@ -33,7 +33,7 @@ export function ExpiringDscAlert({ dscs, user }: ExpiringDscAlertProps) {
   }
 
   return (
-    <Alert variant="destructive" className="relative pr-8">
+    <Alert variant="destructive" className="relative pr-12">
       <AlertTriangle className="h-4 w-4" />
       <AlertTitle>Expiring DSCs Alert!</AlertTitle>
       <AlertDescription>
@@ -49,7 +49,7 @@ export function ExpiringDscAlert({ dscs, user }: ExpiringDscAlertProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="absolute top-2 right-1 h-6 w-6 text-destructive hover:bg-destructive/10"
+        className="absolute top-4 right-4 h-6 w-6 text-destructive hover:bg-destructive/10"
         onClick={() => setIsVisible(false)}
         aria-label="Close alert"
       >
