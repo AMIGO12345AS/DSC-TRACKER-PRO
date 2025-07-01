@@ -44,7 +44,7 @@ export function Header({ allUsers, loggedInUser, onUserChange }: HeaderProps) {
                   className="relative h-10 w-10 rounded-full"
                 >
                   <Avatar>
-                    <AvatarImage src={`https://placehold.co/100x100.png?text=${loggedInUser.name.charAt(0)}`} alt={loggedInUser.name} />
+                    <AvatarImage src={`https://placehold.co/100x100.png`} data-ai-hint="person portrait" alt={loggedInUser.name} />
                     <AvatarFallback>
                       <UserIcon />
                     </AvatarFallback>

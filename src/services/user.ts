@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/firebase';
 import type { User } from '@/types';
-import { collection, getDocs, query, where, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, doc, updateDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -39,8 +39,20 @@ export async function updateUser(userId: string, userData: Partial<Pick<User, 'n
 }
 
 export async function deleteUser(userId: string) {
-  // TODO: Add logic to check if user has a DSC assigned before deleting.
-  // For now, we will just delete the user.
-  const userDoc = doc(db, 'users', userId);
-  await deleteDoc(userDoc);
+  const userRef = doc(db, 'users', userId);
+  
+  // Use a transaction to ensure atomicity
+  await runTransaction(db, async (transaction) => {
+    const userDoc = await transaction.get(userRef);
+
+    if (!userDoc.exists()) {
+        throw new Error("User not found and cannot be deleted.");
+    }
+
+    if (userDoc.data().hasDsc) {
+        throw new Error("Cannot delete a user who is currently holding a DSC.");
+    }
+    
+    transaction.delete(userRef);
+  });
 }
