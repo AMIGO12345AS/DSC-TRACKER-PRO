@@ -1,7 +1,6 @@
 'use server';
 import * as admin from 'firebase-admin';
 import type { User, DSC } from '@/types';
-import serviceAccount from '@/lib/serviceAccountKey.json';
 
 // This function should only be called once per server instance.
 function initializeAdminApp() {
@@ -11,8 +10,14 @@ function initializeAdminApp() {
     }
 
     try {
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON;
+        if (!serviceAccountJson) {
+            console.warn('FIREBASE_SERVICE_ACCOUNT_KEY_JSON environment variable is not set. Automatic seeding will be skipped.');
+            return null;
+        }
+        const serviceAccount = JSON.parse(serviceAccountJson);
+
         // Initialize Firebase Admin SDK
-        // This will only succeed if serviceAccountKey.json is present and valid.
         const app = admin.initializeApp({
             credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
             projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -22,7 +27,7 @@ function initializeAdminApp() {
         // If the service account key is missing or invalid, initialization will fail.
         // We catch this error and return null so the app doesn't crash.
         // Seeding will be skipped, and the user will see the setup guide instead.
-        console.warn('Firebase Admin initialization failed. Automatic seeding will be skipped. This is expected if `serviceAccountKey.json` is not provided. Error:', error.message);
+        console.warn('Firebase Admin initialization failed. Automatic seeding will be skipped. This is expected if the service account key is invalid or not provided correctly. Error:', error.message);
         return null;
     }
 }
