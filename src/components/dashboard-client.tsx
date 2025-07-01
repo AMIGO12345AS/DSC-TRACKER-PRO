@@ -32,12 +32,23 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // This effect ensures the loggedInUser state is valid after data revalidation from the server.
-    // For example, if the current loggedInUser was deleted.
-    if (loggedInUser && !allUsers.some(user => user.id === loggedInUser.id)) {
+    // This effect synchronizes the `loggedInUser` state with fresh data from the server
+    // after a server action and revalidation.
+    if (loggedInUser) {
+      const freshUserData = allUsers.find(user => user.id === loggedInUser.id);
+      
+      // If the logged-in user was deleted, reset to a default user.
+      if (!freshUserData) {
         setLoggedInUser(getInitialUser(allUsers));
-    } else if (!loggedInUser && allUsers.length > 0) {
-        setLoggedInUser(getInitialUser(allUsers));
+      } 
+      // If the user's data has changed (e.g., `hasDsc` toggled), update the state.
+      // A simple JSON.stringify is a reliable way to deep compare the simple user objects.
+      else if (JSON.stringify(freshUserData) !== JSON.stringify(loggedInUser)) {
+        setLoggedInUser(freshUserData);
+      }
+    } else if (allUsers.length > 0) {
+      // If there was no logged-in user but now there are users, set one.
+      setLoggedInUser(getInitialUser(allUsers));
     }
   }, [allUsers, loggedInUser]);
   
