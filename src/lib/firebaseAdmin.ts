@@ -1,26 +1,25 @@
+'use server';
 
 import * as admin from 'firebase-admin';
 
 function getServiceAccount() {
-  // The private key from an environment variable needs to have its newlines restored.
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-  if (
-    !process.env.FIREBASE_PROJECT_ID ||
-    !privateKey ||
-    !process.env.FIREBASE_CLIENT_EMAIL
-  ) {
-    throw new Error(
-      'Firebase server-side credentials are not set. Please check your environment variables: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.'
-    );
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON;
+  
+  if (!serviceAccountJson) {
+      throw new Error(
+        'The FIREBASE_SERVICE_ACCOUNT_KEY_JSON environment variable is not set. Please check your .env file.'
+      );
   }
 
-  return {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey,
-  };
+  try {
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      return serviceAccount;
+  } catch (error) {
+      console.error("Failed to parse service account JSON:", error);
+      throw new Error('The FIREBASE_SERVICE_ACCOUNT_KEY_JSON environment variable is not valid JSON.');
+  }
 }
+
 
 function initializeAdminApp() {
   // Prevent re-initialization
@@ -30,6 +29,11 @@ function initializeAdminApp() {
 
   try {
     const serviceAccount = getServiceAccount();
+
+    if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
+      throw new Error('Parsed service account is missing required fields (project_id, private_key, client_email).');
+    }
+
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
