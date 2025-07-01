@@ -37,7 +37,7 @@ export function Header({ allUsers, loggedInUser, onUserChange }: HeaderProps) {
           <KeyIcon className="h-6 w-6 text-primary" />
           <h1 className="font-headline text-xl font-bold text-primary">CertiTrack</h1>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center mr-8">
           <nav className="flex items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
