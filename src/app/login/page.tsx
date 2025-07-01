@@ -24,11 +24,28 @@ export default function LoginPage() {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      const token = await auth.currentUser?.getIdToken();
-      document.cookie = `firebaseIdToken=${token}; path=/;`;
+      // The AuthProvider will handle cookie setting and state updates.
+      // After a successful login, we just need to navigate to the home page.
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to log in. Please check your credentials.');
+      // Provide more specific, user-friendly error messages
+      let errorMessage = 'Failed to log in. Please check your credentials.';
+      if (err.code) {
+        switch (err.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            errorMessage = 'Invalid email or password. Please try again.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Please enter a valid email address.';
+            break;
+          default:
+            // Use a generic message for other unexpected errors to avoid exposing internal details.
+            errorMessage = 'An unexpected error occurred. Please try again later.';
+        }
+      }
+      setError(errorMessage);
       setIsLoading(false);
     }
   };

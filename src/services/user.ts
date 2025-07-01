@@ -3,7 +3,7 @@
 import { db } from '@/lib/firebase';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import type { User } from '@/types';
-import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc, setDoc } from 'firebase/firestore';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -59,7 +59,7 @@ export async function addUser(userData: AddUserData) {
 
     // Step 3: Create user profile in Firestore, using the UID from Auth as the document ID
     const userDocRef = doc(db, 'users', userRecord.uid);
-    await addDoc(usersColRef, {
+    await setDoc(userDocRef, {
         uid: userRecord.uid,
         name,
         role,
