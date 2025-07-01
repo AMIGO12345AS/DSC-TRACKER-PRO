@@ -404,32 +404,35 @@ const CsvDscImportSchema = z.object({
 });
 
 // Helper to delete all documents in a collection in batches
-async function deleteCollection(collectionPath: string) {
+async function deleteCollection(collectionPath: string, batch: writeBatch) {
     const collectionRef = collection(db, collectionPath);
     const q = query(collectionRef);
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) return;
 
-    const batchSize = 500;
-    const batches = [];
-
-    for (let i = 0; i < snapshot.docs.length; i += batchSize) {
-        const batch = writeBatch(db);
-        snapshot.docs.slice(i, i + batchSize).forEach(doc => batch.delete(doc.ref));
-        batches.push(batch.commit());
-    }
-
-    await Promise.all(batches);
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
 }
 
 // Action to import JSON backup, overwriting all existing data
 export async function importJsonBackupAction(jsonString: string): Promise<{ success: boolean; message: string; }> {
     try {
-        await deleteCollection('dscs');
-        await deleteCollection('users');
-        await deleteCollection('auditLogs');
-        await processJsonImport(jsonString);
+        // Step 1: Parse and validate the entire file content first.
+        let parsedData;
+        try {
+            parsedData = JSON.parse(jsonString);
+        } catch (error) {
+            throw new Error('Invalid JSON file. Could not parse.');
+        }
+
+        const validatedData = ImportedJsonDataSchema.safeParse(parsedData);
+        if (!validatedData.success) {
+            throw new Error(`Invalid data structure in JSON file. ${validatedData.error.message}`);
+        }
+        
+        // Step 2: If validation passes, proceed with database operations.
+        await processJsonImport(validatedData.data);
+
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { success: false, message: `Import failed: ${errorMessage}.` };
@@ -439,34 +442,26 @@ export async function importJsonBackupAction(jsonString: string): Promise<{ succ
     return { success: true, message: 'JSON backup imported successfully. All previous data has been overwritten.' };
 }
 
-async function processJsonImport(jsonString: string) {
-    let parsedData;
-    try {
-        parsedData = JSON.parse(jsonString);
-    } catch (error) {
-        throw new Error('Invalid JSON file. Could not parse.');
-    }
+async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
+    const { users: importedUsers, dscs: importedDscs } = data;
 
-    const validatedData = ImportedJsonDataSchema.safeParse(parsedData);
-    if (!validatedData.success) {
-        throw new Error(`Invalid data structure in JSON file. ${validatedData.error.message}`);
-    }
-    
-    const { users: importedUsers, dscs: importedDscs } = validatedData.data;
+    const writeDbBatch = writeBatch(db);
+
+    // Delete all existing data
+    await deleteCollection('dscs', writeDbBatch);
+    await deleteCollection('users', writeDbBatch);
+    await deleteCollection('auditLogs', writeDbBatch);
 
     // Batch write new users and create ID map
     const oldToNewUserIdMap = new Map<string, string>();
-    const userBatch = writeBatch(db);
     importedUsers.forEach(user => {
         const newUserRef = doc(collection(db, 'users'));
         oldToNewUserIdMap.set(user.id, newUserRef.id);
         const { id, ...userData } = user;
-        userBatch.set(newUserRef, userData);
+        writeDbBatch.set(newUserRef, userData);
     });
-    await userBatch.commit();
 
     // Batch write new DSCs
-    const dscBatch = writeBatch(db);
     importedDscs.forEach(dsc => {
         const newDscRef = doc(collection(db, 'dscs'));
         const { id, expiryDate, currentHolderId, ...dscData } = dsc;
@@ -476,14 +471,17 @@ async function processJsonImport(jsonString: string) {
             expiryDate: Timestamp.fromDate(new Date(expiryDate)),
             currentHolderId: currentHolderId ? oldToNewUserIdMap.get(currentHolderId) || null : null,
         };
-        dscBatch.set(newDscRef, newDscData);
+        writeDbBatch.set(newDscRef, newDscData);
     });
-    await dscBatch.commit();
+    
+    // Commit all changes at once
+    await writeDbBatch.commit();
 }
 
 
 export async function importUsersFromCsvAction(csvString: string): Promise<{ success: boolean; message: string; }> {
     try {
+        // Step 1: Parse and validate the entire file content first.
         const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
         if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
 
@@ -496,9 +494,10 @@ export async function importUsersFromCsvAction(csvString: string): Promise<{ suc
             userNames.add(user.name);
         }
 
-        await deleteCollection('users');
-        
+        // Step 2: If validation passes, proceed with database operations.
         const userBatch = writeBatch(db);
+        await deleteCollection('users', userBatch);
+        
         validatedUsers.data.forEach(user => {
             const newUserRef = doc(collection(db, 'users'));
             userBatch.set(newUserRef, { name: user.name, role: user.role, hasDsc: false });
@@ -517,31 +516,36 @@ export async function importUsersFromCsvAction(csvString: string): Promise<{ suc
 
 export async function importDscsFromCsvAction(csvString: string): Promise<{ success: boolean; message: string; }> {
     try {
+        // Step 1: Parse and validate the entire file content first.
         const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
         if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
 
         const validatedDscs = z.array(CsvDscImportSchema).safeParse(parsedCsv.data);
         if (!validatedDscs.success) throw new Error(`Invalid DSC data in CSV: ${validatedDscs.error.errors[0].message}`);
+        
+        for (const dsc of validatedDscs.data) {
+            const expiryDate = new Date(dsc['expiryDate (YYYY-MM-DD)']);
+            if (isNaN(expiryDate.getTime())) throw new Error(`Invalid date format for DSC S/N ${dsc.serialNumber}`);
+        }
 
-        // Get all users to create a name-to-ID map
+        // Step 2: If validation passes, get existing users for mapping.
         const allUsersSnapshot = await getDocs(collection(db, 'users'));
         const userNameToIdMap = new Map<string, string>();
         allUsersSnapshot.forEach(doc => userNameToIdMap.set(doc.data().name, doc.id));
         
-        // Reset hasDsc flag for all users
-        const resetUserBatch = writeBatch(db);
-        allUsersSnapshot.forEach(userDoc => {
-            resetUserBatch.update(userDoc.ref, { hasDsc: false });
-        });
-        await resetUserBatch.commit();
-        
-        // Delete all existing DSCs
-        await deleteCollection('dscs');
-
-        // Batch write new DSCs and update user `hasDsc` flag
-        const dscBatch = writeBatch(db);
+        // Step 3: Perform all database writes in batches.
+        const dscWriteBatch = writeBatch(db);
         const userUpdateBatch = writeBatch(db);
 
+        // Delete all existing DSCs
+        await deleteCollection('dscs', dscWriteBatch);
+        
+        // Reset hasDsc flag for all users
+        allUsersSnapshot.forEach(userDoc => {
+            userUpdateBatch.update(userDoc.ref, { hasDsc: false });
+        });
+
+        // Prepare new DSCs and user updates
         validatedDscs.data.forEach(dsc => {
             const newDscRef = doc(collection(db, 'dscs'));
             let currentHolderId: string | null = null;
@@ -554,13 +558,11 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
                     const userRef = doc(db, 'users', currentHolderId);
                     userUpdateBatch.update(userRef, { hasDsc: true });
                 } else {
-                    // Optionally handle cases where the user in the CSV doesn't exist
                     console.warn(`User "${dsc.currentHolderName}" for DSC S/N ${dsc.serialNumber} not found. Storing DSC without a holder.`);
                 }
             }
             
             const expiryDate = new Date(dsc['expiryDate (YYYY-MM-DD)']);
-            if (isNaN(expiryDate.getTime())) throw new Error(`Invalid date format for DSC S/N ${dsc.serialNumber}`);
 
             const newDscData = {
                 serialNumber: dsc.serialNumber,
@@ -571,11 +573,12 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
                 location: { mainBox: dsc.locationMainBox ?? 1, subBox: dsc.locationSubBox ?? 'a' }
             };
 
-            dscBatch.set(newDscRef, newDscData);
+            dscWriteBatch.set(newDscRef, newDscData);
         });
 
-        await dscBatch.commit();
+        // Commit all batches
         await userUpdateBatch.commit();
+        await dscWriteBatch.commit();
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

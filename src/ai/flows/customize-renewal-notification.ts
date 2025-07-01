@@ -43,33 +43,24 @@ export async function customizeRenewalNotification(
   return customizeRenewalNotificationFlow(input);
 }
 
-const customizeRenewalNotificationPrompt = ai.definePrompt({
-  name: 'customizeRenewalNotificationPrompt',
-  input: {schema: CustomizeRenewalNotificationInputSchema},
-  output: {schema: CustomizeRenewalNotificationOutputSchema},
-  prompt: `You are an assistant that helps to customize renewal notification.
-
-  Use the information to set the new notification content and the trigger time for sending the notification.
-
-  Email template: {{{emailTemplate}}}
-  In-app template: {{{inAppTemplate}}}
-  Timing (days before expiry): {{{timing}}}
-
-  Return a success status and a message indicating the result of the customization.
-  `,
-});
-
 const customizeRenewalNotificationFlow = ai.defineFlow(
   {
     name: 'customizeRenewalNotificationFlow',
     inputSchema: CustomizeRenewalNotificationInputSchema,
     outputSchema: CustomizeRenewalNotificationOutputSchema,
   },
-  async input => {
-    // TODO: Implement the logic to save the customized notification content and timing
-    // to a database or configuration file.
-    // For now, we will just return a success message.
-    const {output} = await customizeRenewalNotificationPrompt(input);
-    return output!;
+  async (input) => {
+    // In a real application, you would save these settings to a database.
+    // For this demo, we simulate a successful save and generate a confirmation message.
+    console.log('Updating notification settings:', input);
+
+    // This is a simple example. A more complex flow could use an LLM to validate
+    // or suggest improvements to the templates.
+    const successMessage = `Successfully updated notification settings. Notifications will be sent ${input.timing} days before expiry.`;
+    
+    return {
+      success: true,
+      message: successMessage,
+    };
   }
 );

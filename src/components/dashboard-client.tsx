@@ -14,12 +14,15 @@ interface DashboardClientProps {
     dscs: DSC[];
 }
 
+function getInitialUser(users: User[]): User | undefined {
+    if (users.length === 0) return undefined;
+    const firstLeader = users.find(u => u.role === 'leader');
+    return firstLeader || users[0];
+}
+
+
 export default function DashboardClient({ allUsers, dscs }: DashboardClientProps) {
-  const [loggedInUser, setLoggedInUser] = useState<User | undefined>(() => {
-    // Set initial user predictably: first leader, or first user if no leader exists.
-    const firstLeader = allUsers.find(u => u.role === 'leader');
-    return firstLeader || allUsers[0];
-  });
+  const [loggedInUser, setLoggedInUser] = useState<User | undefined>(() => getInitialUser(allUsers));
   
   const [highlightedItem, setHighlightedItem] = useState<{
     type: 'dsc' | 'employee';
@@ -28,25 +31,13 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
 
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // This effect synchronizes the loggedInUser state with the fresh data
-  // that is passed down as props after a server action revalidates the page.
   useEffect(() => {
-    if (!loggedInUser) {
-        if (allUsers.length > 0) {
-            const firstLeader = allUsers.find(u => u.role === 'leader');
-            setLoggedInUser(firstLeader || allUsers[0]);
-        }
-        return;
-    }
-    
-    const freshUserData = allUsers.find(user => user.id === loggedInUser.id);
-    // Deep comparison to prevent needless re-renders if the user object is the same
-    if (freshUserData && JSON.stringify(freshUserData) !== JSON.stringify(loggedInUser)) {
-      setLoggedInUser(freshUserData);
-    } else if (!freshUserData && allUsers.length > 0) {
-      // Handle case where the logged-in user might have been deleted
-      const firstLeader = allUsers.find(u => u.role === 'leader');
-      setLoggedInUser(firstLeader || allUsers[0]);
+    // This effect ensures the loggedInUser state is valid after data revalidation from the server.
+    // For example, if the current loggedInUser was deleted.
+    if (loggedInUser && !allUsers.some(user => user.id === loggedInUser.id)) {
+        setLoggedInUser(getInitialUser(allUsers));
+    } else if (!loggedInUser && allUsers.length > 0) {
+        setLoggedInUser(getInitialUser(allUsers));
     }
   }, [allUsers, loggedInUser]);
   
@@ -63,6 +54,7 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
     // Clear any existing highlight timeout
     if (highlightTimeoutRef.current) {
         clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = null;
     }
 
     setHighlightedItem(item);
