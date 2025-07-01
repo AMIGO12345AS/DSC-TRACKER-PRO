@@ -1,9 +1,8 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import type { User } from '@/types';
-import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc, setDoc, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc, addDoc } from 'firebase/firestore';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -13,7 +12,6 @@ export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
       q = query(usersCol, where('role', '==', role));
     }
     const userSnapshot = await getDocs(q);
-    // Note: The document ID is now the user's UID from Firebase Auth
     const userList = userSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, uid: doc.id } as User));
     return userList;
   } catch (error) {
@@ -37,13 +35,12 @@ export async function getUserProfile(uid: string): Promise<User | null> {
 }
 
 
-type AddUserData = Omit<User, 'id' | 'uid' | 'hasDsc'> & { email: string; password?: string };
+type AddUserData = Omit<User, 'id' | 'uid' | 'hasDsc'>;
 
-// For leaders creating users via the Manage Users dialog
 export async function addUser(userData: AddUserData) {
-    const { email, password, name, role } = userData;
+    const { name } = userData;
 
-    // Step 1: Check if a user with the same name already exists in Firestore
+    // Check if a user with the same name already exists in Firestore
     const usersColRef = collection(db, 'users');
     const nameQuery = query(usersColRef, where("name", "==", name));
     const nameQuerySnapshot = await getDocs(nameQuery);
@@ -51,23 +48,16 @@ export async function addUser(userData: AddUserData) {
         throw new Error(`A user with the name "${name}" already exists.`);
     }
 
-    // Step 2: Create user in Firebase Authentication
-    const userRecord = await adminAuth.createUser({
-        email,
-        password,
-        displayName: name,
-    });
-
-    // Step 3: Create user profile in Firestore, using the UID from Auth as the document ID
-    const userDocRef = doc(db, 'users', userRecord.uid);
-    await setDoc(userDocRef, {
-        uid: userRecord.uid,
-        name,
-        role,
+    // Create user profile in Firestore
+    const newUserRef = await addDoc(usersColRef, {
+        ...userData,
         hasDsc: false,
     });
+    
+    // Set the UID to be the same as the document ID
+    await updateDoc(newUserRef, { uid: newUserRef.id });
 
-    return userRecord.uid;
+    return newUserRef.id;
 }
 
 
@@ -83,11 +73,6 @@ export async function updateUser(userId: string, userData: Partial<Pick<User, 'n
   }
 
   await updateDoc(userDocRef, userData);
-  
-  // Also update display name in Firebase Auth
-  if (userData.name) {
-    await adminAuth.updateUser(userId, { displayName: userData.name });
-  }
 }
 
 export async function deleteUser(userId: string) {
@@ -101,7 +86,4 @@ export async function deleteUser(userId: string) {
     // Delete from Firestore
     transaction.delete(userRef);
   });
-
-  // Delete from Firebase Auth after transaction succeeds
-  await adminAuth.deleteUser(userId);
 }

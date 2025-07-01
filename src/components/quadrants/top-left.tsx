@@ -10,25 +10,24 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
 
 interface TopLeftQuadrantProps {
   leaders: User[];
   allDscs: DSC[];
+  currentUser: User;
 }
 
-export default function TopLeftQuadrant({ leaders, allDscs }: TopLeftQuadrantProps) {
+export default function TopLeftQuadrant({ leaders, allDscs, currentUser }: TopLeftQuadrantProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { userProfile } = useAuth();
 
-  if (!userProfile) {
+  if (!currentUser) {
     return null;
   }
 
-  const myDsc = userProfile.hasDsc
-    ? allDscs.find((dsc) => dsc.currentHolderId === userProfile.id && dsc.status === 'with-employee')
+  const myDsc = currentUser.hasDsc
+    ? allDscs.find((dsc) => dsc.currentHolderId === currentUser.id && dsc.status === 'with-employee')
     : null;
 
   const handleReturnDsc = async () => {
@@ -37,8 +36,8 @@ export default function TopLeftQuadrant({ leaders, allDscs }: TopLeftQuadrantPro
     
     const payload = {
       dscId: myDsc.id,
-      actorId: userProfile.id,
-      actorName: userProfile.name,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
       serialNumber: myDsc.serialNumber,
       description: myDsc.description,
     };
@@ -95,7 +94,7 @@ export default function TopLeftQuadrant({ leaders, allDscs }: TopLeftQuadrantPro
             </div>
           ) : (
              <div className="text-sm text-muted-foreground">
-              {userProfile.hasDsc
+              {currentUser.hasDsc
                 ? 'Loading your DSC info...'
                 : 'You do not currently hold a DSC.'}
             </div>

@@ -17,7 +17,7 @@ function DashboardSkeleton() {
             <Skeleton className="h-8 w-32" />
           </div>
           <div className="mr-8 flex items-center">
-            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-24" />
           </div>
         </div>
       </header>

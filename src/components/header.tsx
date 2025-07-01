@@ -1,7 +1,6 @@
 'use client';
 
-import { Settings, LogOut, Users, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,30 +14,31 @@ import { KeyIcon } from './icons';
 import { NotificationSettingsDialog } from './settings/notification-settings-dialog';
 import type { User } from '@/types';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-export function Header() {
-  const { user, userProfile } = useAuth();
-  const router = useRouter();
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    // Explicitly clear the cookie on logout. The AuthProvider will then
-    // pick up the signed-out state, but this ensures the middleware sees
-    // the change immediately upon the next navigation.
-    document.cookie = 'firebaseIdToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    router.push('/login');
+interface HeaderProps {
+    allUsers: User[];
+    currentUser: User;
+    setCurrentUser: (user: User) => void;
+}
+
+export function Header({ allUsers, currentUser, setCurrentUser }: HeaderProps) {
+  const isLeader = currentUser.role === 'leader';
+  const initial = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : '?';
+
+  const handleUserChange = (userId: string) => {
+    const user = allUsers.find(u => u.id === userId);
+    if (user) {
+      setCurrentUser(user);
+    }
   };
-
-  if (!user || !userProfile) {
-    return null; // Or a skeleton loader
-  }
-
-  const isLeader = userProfile.role === 'leader';
-  const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : '?';
   
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -47,15 +47,38 @@ export function Header() {
           <KeyIcon className="h-6 w-6 text-primary" />
           <h1 className="font-headline text-xl font-bold text-primary">CertiTrack</h1>
         </div>
-        <div className="flex items-center mr-8">
-          <nav className="flex items-center">
+        <div className="flex items-center gap-4 mr-8">
+            <div className='w-48'>
+                <Select value={currentUser.id} onValueChange={handleUserChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Switch user..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                     {allUsers.map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                            <div className='flex items-center gap-2'>
+                               <Avatar className='h-6 w-6'>
+                                 <AvatarFallback
+                                    className={cn(
+                                        'font-semibold text-xs',
+                                        user.role === 'leader'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-secondary text-secondary-foreground'
+                                    )}
+                                    >
+                                    {user.name.charAt(0).toUpperCase()}
+                                 </AvatarFallback>
+                               </Avatar>
+                               <span>{user.name}</span>
+                            </div>
+                        </SelectItem>
+                     ))}
+                  </SelectContent>
+                </Select>
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-10 w-10 rounded-full"
-                >
-                  <Avatar>
+                  <Avatar className="cursor-pointer">
                     <AvatarFallback
                       className={cn(
                         'font-semibold',
@@ -67,14 +90,13 @@ export function Header() {
                       {initial}
                     </AvatarFallback>
                   </Avatar>
-                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userProfile.name}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
+                    <p className="text-sm font-medium leading-none">{currentUser.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground capitalize">
+                      {currentUser.role}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -87,13 +109,8 @@ export function Header() {
                     </DropdownMenuItem>
                   </NotificationSettingsDialog>
                 )}
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </nav>
         </div>
       </div>
     </header>

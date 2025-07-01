@@ -1,21 +1,27 @@
 'use server';
 
-import { adminApp, adminDb, adminAuth } from '@/lib/firebaseAdmin';
+import { adminApp, adminDb } from '@/lib/firebaseAdmin';
 
 // Sample Data for automatic seeding
 const usersData = [
     {
-        uid: 'eEgjnwHQrrUPKjLhgYCHwZTuWI33',
-        email: 'leader@certitrack.app',
-        password: 'password123',
+        uid: 'leader01',
         name: 'Leader Admin',
         role: 'leader' as const,
     },
     {
-        uid: 'rl4icoGtSmMwXqCcxlWoiHqlBiO2',
-        email: 'aseemnrs@gmail.com',
-        password: '123123',
+        uid: 'employee01',
         name: 'Aseem',
+        role: 'employee' as const,
+    },
+    {
+        uid: 'employee02',
+        name: 'Ben',
+        role: 'employee' as const,
+    },
+    {
+        uid: 'employee03',
+        name: 'Catherine',
         role: 'employee' as const,
     },
 ];
@@ -39,9 +45,10 @@ export async function ensureDatabaseSeeded() {
     try {
         const usersCollection = adminDb.collection('users');
         const userDocs = await usersCollection.limit(1).get();
-        // This logic is now safer. It will run every time to ensure auth users match,
-        // without being destructive.
-        await seedUsers();
+        if (userDocs.empty) {
+            console.log('Users collection is empty. Seeding users...');
+            await seedUsers();
+        }
         
         const dscsCollection = adminDb.collection('dscs');
         const dscDocs = await dscsCollection.limit(1).get();
@@ -57,53 +64,17 @@ export async function ensureDatabaseSeeded() {
 
 async function seedUsers() {
     const usersCollection = adminDb.collection('users');
-    
-    for (const userData of usersData) {
-        try {
-            // Check if user exists, and update them if they do
-            await adminAuth.updateUser(userData.uid, {
-                email: userData.email,
-                password: userData.password,
-                displayName: userData.name,
-            });
-            console.log(`Updated Auth user: ${userData.email}`);
-        } catch (error: any) {
-            // If user does not exist, create them
-            if (error.code === 'auth/user-not-found') {
-                await adminAuth.createUser({
-                    uid: userData.uid,
-                    email: userData.email,
-                    password: userData.password,
-                    displayName: userData.name,
-                });
-                console.log(`Created Auth user: ${userData.email}`);
-            } else {
-                console.error(`Error processing user ${userData.email}:`, error);
-                continue; // Skip Firestore part if auth fails
-            }
-        }
+    const userBatch = adminDb.batch();
 
+    for (const userData of usersData) {
         const userDocRef = usersCollection.doc(userData.uid);
-        const userDoc = await userDocRef.get();
-        
-        if (userDoc.exists()) {
-             // Only update non-state fields, leave `hasDsc` alone
-             await userDocRef.update({
-                uid: userData.uid,
-                name: userData.name,
-                role: userData.role,
-             });
-        } else {
-            // Create the doc if it doesn't exist
-            await userDocRef.set({
-                uid: userData.uid,
-                name: userData.name,
-                role: userData.role,
-                hasDsc: false,
-            });
-        }
+        userBatch.set(userDocRef, {
+            ...userData,
+            hasDsc: false,
+        });
     }
-    console.log(`Successfully seeded/updated ${usersData.length} users.`);
+    await userBatch.commit();
+    console.log(`Successfully seeded ${usersData.length} users.`);
 }
 
 

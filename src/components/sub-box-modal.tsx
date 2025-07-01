@@ -11,26 +11,25 @@ import { Button } from './ui/button';
 import { KeyIcon } from './icons';
 import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils';
-import type { DSC } from '@/types';
+import type { DSC, User } from '@/types';
 import { useState, useEffect } from 'react';
 import { takeDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
 
 interface SubBoxModalProps {
   isOpen: boolean;
   onClose: () => void;
   mainBoxId: number | null;
   dscs: DSC[];
+  currentUser: User;
   onDscSelect: (dsc: DSC) => void;
 }
 
-export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect }: SubBoxModalProps) {
+export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onDscSelect }: SubBoxModalProps) {
   const router = useRouter();
-  const { userProfile } = useAuth();
   const [selectedDsc, setSelectedDsc] = useState<DSC | null>(null);
   const [selectedSubBox, setSelectedSubBox] = useState<string | null>(null);
   const { toast } = useToast();
@@ -46,13 +45,13 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect }: S
   }, [isOpen]);
   
   const handleTakeDsc = async () => {
-    if (!selectedDsc || !userProfile) return;
+    if (!selectedDsc || !currentUser) return;
     
     setIsSubmitting(true);
     const payload = {
         dscId: selectedDsc.id,
-        actorId: userProfile.id,
-        actorName: userProfile.name,
+        actorId: currentUser.id,
+        actorName: currentUser.name,
         serialNumber: selectedDsc.serialNumber,
         description: selectedDsc.description,
     };
@@ -84,9 +83,9 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect }: S
     ? dscs.filter((d) => d.location.subBox === selectedSubBox)
     : [];
 
-  if (!mainBoxId || !userProfile) return null;
+  if (!mainBoxId || !currentUser) return null;
 
-  const canTakeSelectedDsc = selectedDsc && !userProfile.hasDsc;
+  const canTakeSelectedDsc = selectedDsc && !currentUser.hasDsc;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -157,7 +156,7 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, onDscSelect }: S
                                 <Button className="mt-2 w-full" onClick={handleTakeDsc} disabled={!canTakeSelectedDsc || isSubmitting}>
                                     {isSubmitting ? <Loader2 className="animate-spin" /> : 'Take DSC'}
                                 </Button>
-                                {userProfile.hasDsc && (
+                                {currentUser.hasDsc && (
                                     <p className="mt-2 text-xs text-destructive">
                                     You already hold a DSC.
                                     </p>

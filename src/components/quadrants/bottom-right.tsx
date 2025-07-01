@@ -24,19 +24,18 @@ import {
 import { Button } from '../ui/button';
 import { deleteDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
 
 interface BottomRightQuadrantProps {
   allDscs: DSC[];
   allUsers: User[];
+  currentUser: User;
   onHighlight: (item: { type: 'dsc' | 'employee'; id: string } | null) => void;
 }
 
-export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight }: BottomRightQuadrantProps) {
+export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, onHighlight }: BottomRightQuadrantProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const router = useRouter();
-  const { userProfile } = useAuth();
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
@@ -59,11 +58,11 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight }: 
   }, [searchTerm, allDscs, allUsers]);
 
   const handleDeleteDsc = async (dsc: (typeof searchResults)[0]) => {
-    if (!userProfile) return;
+    if (!currentUser) return;
     const payload = {
       dscId: dsc.id,
-      actorId: userProfile.id,
-      actorName: userProfile.name,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
       serialNumber: dsc.serialNumber,
       description: dsc.description,
     };
@@ -90,7 +89,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight }: 
       setSearchTerm('');
   }
 
-  if (!userProfile) {
+  if (!currentUser) {
     return null;
   }
 
@@ -126,10 +125,11 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight }: 
                         <p className="font-semibold">{dsc.description}</p>
                         <p className="text-sm text-muted-foreground">{dsc.serialNumber} - {dsc.status === 'storage' ? `Box ${dsc.location.mainBox}` : `With ${dsc.user?.name || 'User'}`}</p>
                       </div>
-                      {userProfile.role === 'leader' && (
+                      {currentUser.role === 'leader' && (
                         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <ManageDscDialog
                             dsc={dsc}
+                            currentUser={currentUser}
                             trigger={
                               <Button variant="ghost" size="icon">
                                 <Edit className="h-4 w-4" />
@@ -169,13 +169,13 @@ export default function BottomRightQuadrant({ allDscs, allUsers, onHighlight }: 
           )}
         </CardContent>
       </Card>
-      {userProfile.role === 'leader' && (
+      {currentUser.role === 'leader' && (
         <Card>
           <CardHeader>
             <h3 className="font-headline text-2xl">Leader Actions</h3>
           </CardHeader>
           <CardContent>
-            <LeaderActions allUsers={allUsers} />
+            <LeaderActions allUsers={allUsers} currentUser={currentUser} />
           </CardContent>
         </Card>
       )}

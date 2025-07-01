@@ -9,12 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { addDscAction, editDscAction } from '@/app/actions';
-import type { DSC } from '@/types';
+import type { DSC, User } from '@/types';
 import { format } from 'date-fns';
-import { useAuth } from '@/hooks/use-auth';
 
 type DscFormProps = {
   dsc?: DSC | null;
+  currentUser: User;
   onSuccess: () => void;
   onCancel: () => void;
 };
@@ -31,8 +31,7 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
   );
 }
 
-export function DscForm({ dsc, onSuccess, onCancel }: DscFormProps) {
-  const { userProfile } = useAuth();
+export function DscForm({ dsc, currentUser, onSuccess, onCancel }: DscFormProps) {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditing = !!dsc;
@@ -59,15 +58,15 @@ export function DscForm({ dsc, onSuccess, onCancel }: DscFormProps) {
   
   const defaultExpiryDate = dsc?.expiryDate ? format(new Date(dsc.expiryDate), 'yyyy-MM-dd') : '';
 
-  if (!userProfile) {
+  if (!currentUser) {
     return <div>Loading...</div>;
   }
 
   return (
     <form action={dispatch} ref={formRef}>
       {isEditing && <input type="hidden" name="dscId" value={dsc.id} />}
-      <input type="hidden" name="actorId" value={userProfile.id} />
-      <input type="hidden" name="actorName" value={userProfile.name} />
+      <input type="hidden" name="actorId" value={currentUser.id} />
+      <input type="hidden" name="actorName" value={currentUser.name} />
 
       <div className="grid gap-4 py-4">
         <div className="space-y-1">

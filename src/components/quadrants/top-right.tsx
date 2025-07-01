@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SubBoxModal } from '../sub-box-modal';
-import type { DSC } from '@/types';
+import type { DSC, User } from '@/types';
 import { cn } from '@/lib/utils';
 import { KeyRound } from 'lucide-react';
 
@@ -12,9 +12,10 @@ interface TopRightQuadrantProps {
   dscs: DSC[];
   highlightedId: string | null;
   onDscSelect: (dsc: DSC) => void;
+  currentUser: User;
 }
 
-export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect }: TopRightQuadrantProps) {
+export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, currentUser }: TopRightQuadrantProps) {
   const [selectedMainBox, setSelectedMainBox] = useState<number | null>(null);
 
   const mainBoxes = Array.from({ length: 8 }, (_, i) => {
@@ -61,6 +62,7 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect }: T
         onClose={() => setSelectedMainBox(null)}
         mainBoxId={selectedMainBox}
         dscs={dscsInSelectedBox}
+        currentUser={currentUser}
         onDscSelect={onDscSelect}
       />
     </>

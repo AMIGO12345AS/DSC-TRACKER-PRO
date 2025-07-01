@@ -3,22 +3,21 @@ import { useMemo, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, X } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
-import type { DSC } from '@/types';
+import type { DSC, User } from '@/types';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
 
 interface ExpiringDscAlertProps {
   dscs: DSC[];
+  currentUser: User;
 }
 
 const EXPIRY_THRESHOLD_DAYS = 30;
 
-export function ExpiringDscAlert({ dscs }: ExpiringDscAlertProps) {
+export function ExpiringDscAlert({ dscs, currentUser }: ExpiringDscAlertProps) {
   const [isVisible, setIsVisible] = useState(true);
-  const { userProfile } = useAuth();
 
   const expiringDscs = useMemo(() => {
-    if (userProfile?.role !== 'leader') {
+    if (currentUser?.role !== 'leader') {
       return [];
     }
     const now = new Date();
@@ -27,9 +26,9 @@ export function ExpiringDscAlert({ dscs }: ExpiringDscAlertProps) {
       const daysUntilExpiry = differenceInDays(expiryDate, now);
       return daysUntilExpiry >= 0 && daysUntilExpiry <= EXPIRY_THRESHOLD_DAYS;
     });
-  }, [dscs, userProfile]);
+  }, [dscs, currentUser]);
 
-  if (expiringDscs.length === 0 || !isVisible || !userProfile) {
+  if (expiringDscs.length === 0 || !isVisible || !currentUser) {
     return null;
   }
 

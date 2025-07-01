@@ -2,9 +2,9 @@
 
 import * as admin from 'firebase-admin';
 
+// Hardcoded service account for reliability in this environment.
+// In a typical production setup, this would come from a secure secret manager.
 function getServiceAccount() {
-  // This is a workaround for the fact that the service account key is not
-  // available as an environment variable in this environment.
   const serviceAccount = {
     "type": "service_account",
     "project_id": "dsc-tracker-app",
@@ -33,7 +33,7 @@ function initializeAdminApp() {
     const serviceAccount = getServiceAccount();
 
     if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
-      throw new Error('Parsed service account is missing required fields (project_id, private_key, client_email).');
+      throw new Error('Hardcoded service account is missing required fields (project_id, private_key, client_email).');
     }
 
     return admin.initializeApp({
@@ -49,5 +49,4 @@ function initializeAdminApp() {
 }
 
 export const adminApp = initializeAdminApp();
-export const adminAuth = admin.auth(adminApp);
 export const adminDb = admin.firestore(adminApp);

@@ -9,18 +9,16 @@ import { AllDscsDialog } from './all-dscs-dialog';
 import { ImportDataDialog } from './import-data-dialog';
 import { ExportDataDialog } from './export-data-dialog';
 import { Upload, Download } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
 
+export function LeaderActions({ allUsers, currentUser }: { allUsers: User[], currentUser: User }) {
 
-export function LeaderActions({ allUsers }: { allUsers: User[] }) {
-  const { userProfile } = useAuth();
-
-  if (!userProfile) return null;
+  if (!currentUser) return null;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <ManageDscDialog 
         trigger={<Button className="w-full">Add New DSC</Button>}
+        currentUser={currentUser}
       />
       
       <ManageUsersDialog 

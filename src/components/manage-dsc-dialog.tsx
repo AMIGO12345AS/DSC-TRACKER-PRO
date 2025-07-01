@@ -10,15 +10,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { DscForm } from './dsc-form';
-import type { DSC } from '@/types';
+import type { DSC, User } from '@/types';
 
 interface ManageDscDialogProps {
   dsc?: DSC | null;
   trigger: React.ReactNode;
   onSuccess?: () => void;
+  currentUser: User;
 }
 
-export function ManageDscDialog({ dsc, trigger, onSuccess }: ManageDscDialogProps) {
+export function ManageDscDialog({ dsc, trigger, onSuccess, currentUser }: ManageDscDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSuccess = () => {
@@ -42,6 +43,7 @@ export function ManageDscDialog({ dsc, trigger, onSuccess }: ManageDscDialogProp
         </DialogHeader>
         <DscForm 
             dsc={dsc}
+            currentUser={currentUser}
             onSuccess={handleSuccess}
             onCancel={() => setIsOpen(false)}
         />

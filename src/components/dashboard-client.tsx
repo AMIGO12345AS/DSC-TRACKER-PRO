@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/hooks/use-auth';
 import TopLeftQuadrant from '@/components/quadrants/top-left';
 import TopRightQuadrant from '@/components/quadrants/top-right';
 import BottomLeftQuadrant from '@/components/quadrants/bottom-left';
@@ -39,8 +38,8 @@ function DashboardSkeleton() {
 
 
 export default function DashboardClient({ allUsers, dscs }: DashboardClientProps) {
-  const { userProfile, loading } = useAuth();
-  
+  const [currentUser, setCurrentUser] = useState<User | null>(allUsers.find(u => u.role === 'leader') || allUsers[0] || null);
+
   const [highlightedItem, setHighlightedItem] = useState<{
     type: 'dsc' | 'employee';
     id: string;
@@ -69,7 +68,7 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
     }
   };
 
-  if (loading || !userProfile) {
+  if (!currentUser) {
     return <DashboardSkeleton />;
   }
   
@@ -79,16 +78,17 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <Header />
+      <Header allUsers={allUsers} currentUser={currentUser} setCurrentUser={setCurrentUser} />
       <main className="flex-1 p-4 lg:p-6">
-        <ExpiringDscAlert dscs={dscs} />
+        <ExpiringDscAlert dscs={dscs} currentUser={currentUser} />
         <div className="mt-4 grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
           <div className="h-full min-h-[300px] lg:min-h-0">
-            <TopLeftQuadrant leaders={leaders} allDscs={dscs} />
+            <TopLeftQuadrant leaders={leaders} allDscs={dscs} currentUser={currentUser} />
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">
             <TopRightQuadrant 
-              dscs={dscsInStorage} 
+              dscs={dscsInStorage}
+              currentUser={currentUser}
               highlightedId={highlightedItem?.type === 'dsc' ? highlightedItem.id : null}
               onDscSelect={(dsc) => handleHighlight({type: 'dsc', id: dsc.location.mainBox.toString()})}
             />
@@ -103,6 +103,7 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
             <BottomRightQuadrant 
               allDscs={dscs} 
               allUsers={allUsers} 
+              currentUser={currentUser}
               onHighlight={handleHighlight}
             />
           </div>

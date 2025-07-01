@@ -191,32 +191,24 @@ export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>)
 
 
 // User Management Actions
-const BaseUserSchema = z.object({
+const UserSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   role: z.enum(['leader', 'employee'], { required_error: "Role is required." }),
 });
 
-const AddUserSchema = BaseUserSchema.extend({
-  email: z.string().email({ message: "Please enter a valid email." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-});
 
 type UserActionState = {
   errors?: {
     name?: string[];
     role?: string[];
-    email?: string[];
-    password?: string[];
   };
   message?: string;
 };
 
 export async function addUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
-  const validatedFields = AddUserSchema.safeParse({
+  const validatedFields = UserSchema.safeParse({
     name: formData.get('name'),
     role: formData.get('role'),
-    email: formData.get('email'),
-    password: formData.get('password'),
   });
 
   if (!validatedFields.success) {
@@ -243,7 +235,7 @@ export async function updateUserAction(prevState: UserActionState, formData: For
       return { message: 'User ID is missing.' };
   }
 
-  const validatedFields = BaseUserSchema.safeParse({
+  const validatedFields = UserSchema.safeParse({
     name: formData.get('name'),
     role: formData.get('role'),
   });
