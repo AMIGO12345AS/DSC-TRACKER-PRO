@@ -1,10 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb } from '@/services/dsc';
+import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
 import { addUser, updateUser, deleteUser } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
+import type { DSC } from '@/types';
 
 const DscSchema = z.object({
   description: z.string().min(1, { message: "Description is required." }),
@@ -330,6 +331,17 @@ export async function getAuditLogsAction(): Promise<{ logs?: any[]; error?: stri
     try {
         const logs = await getAuditLogs();
         return { logs };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { error: `Database Error: ${errorMessage}.` };
+    }
+}
+
+// Action to get DSCs sorted by expiry
+export async function getDscsSortedByExpiryAction(): Promise<{ dscs?: DSC[]; error?: string; }> {
+    try {
+        const dscs = await getDscs({ sortByExpiry: true });
+        return { dscs };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { error: `Database Error: ${errorMessage}.` };

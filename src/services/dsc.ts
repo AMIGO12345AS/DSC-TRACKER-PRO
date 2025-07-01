@@ -1,15 +1,21 @@
 'use server';
 import { db } from '@/lib/firebase';
 import type { DSC } from '@/types';
-import { collection, getDocs, addDoc, doc, updateDoc, Timestamp, query, where, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, Timestamp, query, where, runTransaction, orderBy } from 'firebase/firestore';
 
-export async function getDscs(): Promise<DSC[]> {
+export async function getDscs(options: { sortByExpiry?: boolean } = {}): Promise<DSC[]> {
   try {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       throw new Error("Firebase project ID is not configured. Please check your .env file.");
     }
     const dscsCol = collection(db, 'dscs');
-    const dscSnapshot = await getDocs(dscsCol);
+    let q = query(dscsCol);
+
+    if (options.sortByExpiry) {
+        q = query(q, orderBy('expiryDate', 'asc'));
+    }
+
+    const dscSnapshot = await getDocs(q);
     const dscList = dscSnapshot.docs.map(doc => {
       const data = doc.data();
       // Firestore timestamp needs to be converted to ISO string for client-side date formatting

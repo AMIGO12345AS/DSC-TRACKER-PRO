@@ -7,6 +7,7 @@ import BottomLeftQuadrant from '@/components/quadrants/bottom-left';
 import BottomRightQuadrant from '@/components/quadrants/bottom-right';
 import type { DSC, User } from '@/types';
 import { Header } from './header';
+import { ExpiringDscAlert } from './expiring-dsc-alert';
 
 interface DashboardClientProps {
     allUsers: User[];
@@ -14,7 +15,7 @@ interface DashboardClientProps {
 }
 
 export default function DashboardClient({ allUsers, dscs }: DashboardClientProps) {
-  const [loggedInUser, setLoggedInUser] = useState<User>(allUsers[0]);
+  const [loggedInUser, setLoggedInUser] = useState<User | undefined>(allUsers.find(u => u.role === 'leader' && !u.hasDsc) || allUsers[0]);
   const [highlightedItem, setHighlightedItem] = useState<{
     type: 'dsc' | 'employee';
     id: string;
@@ -24,7 +25,7 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
   // that is passed down as props after a server action revalidates the page.
   useEffect(() => {
     if (!loggedInUser) {
-        if (allUsers.length > 0) setLoggedInUser(allUsers[0]);
+        if (allUsers.length > 0) setLoggedInUser(allUsers.find(u => u.role === 'leader' && !u.hasDsc) || allUsers[0]);
         return;
     }
     
@@ -61,7 +62,8 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
         onUserChange={setLoggedInUser}
       />
       <main className="flex-1 p-4 lg:p-6">
-        <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
+        <ExpiringDscAlert dscs={dscs} user={loggedInUser} />
+        <div className="mt-4 grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
           <div className="h-full min-h-[300px] lg:min-h-0">
             <TopLeftQuadrant leaders={leaders} loggedInUser={loggedInUser} allDscs={dscs} />
           </div>
