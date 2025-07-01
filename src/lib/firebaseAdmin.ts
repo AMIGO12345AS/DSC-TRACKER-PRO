@@ -1,4 +1,6 @@
+
 import * as admin from 'firebase-admin';
+import serviceAccount from '../../serviceAccountKey.json';
 
 function initializeAdminApp() {
   if (admin.apps.length > 0) {
@@ -6,15 +8,10 @@ function initializeAdminApp() {
   }
 
   try {
-    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON;
-    if (!serviceAccountJson) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY_JSON is not set.');
-    }
-    const serviceAccount = JSON.parse(serviceAccountJson);
-
+    // The service account object is imported directly from the JSON file.
+    // The SDK's runtime is smart enough to handle the snake_case keys from the file.
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     });
   } catch (error: any) {
     console.error('Firebase Admin initialization failed:', error.message);
