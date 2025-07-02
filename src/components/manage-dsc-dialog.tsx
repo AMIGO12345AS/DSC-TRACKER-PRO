@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,7 +16,7 @@ import type { DSC, User } from '@/types';
 interface ManageDscDialogProps {
   dsc?: DSC | null;
   trigger: React.ReactNode;
-  onSuccess?: () => void;
+  onSuccess: () => void;
   currentUser: User;
 }
 
@@ -24,7 +25,7 @@ export function ManageDscDialog({ dsc, trigger, onSuccess, currentUser }: Manage
 
   const handleSuccess = () => {
     setIsOpen(false);
-    onSuccess?.();
+    onSuccess();
   };
   
   const isEditing = !!dsc;

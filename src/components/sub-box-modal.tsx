@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -17,7 +18,6 @@ import { takeDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
-import { useRouter } from 'next/navigation';
 
 interface SubBoxModalProps {
   isOpen: boolean;
@@ -26,10 +26,10 @@ interface SubBoxModalProps {
   dscs: DSC[];
   currentUser: User;
   onDscSelect: (dsc: DSC) => void;
+  refetchData: () => void;
 }
 
-export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onDscSelect }: SubBoxModalProps) {
-  const router = useRouter();
+export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onDscSelect, refetchData }: SubBoxModalProps) {
   const [selectedDsc, setSelectedDsc] = useState<DSC | null>(null);
   const [selectedSubBox, setSelectedSubBox] = useState<string | null>(null);
   const { toast } = useToast();
@@ -61,7 +61,7 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onD
         title: 'Success',
         description: result.message,
       });
-      router.refresh(); // Refresh data on success
+      refetchData();
       onClose();
     } else {
       toast({
@@ -129,7 +129,7 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onD
                 ) : (
                     <>
                         <h3 className="font-semibold mb-2">Sub-box {selectedSubBox.toUpperCase()}</h3>
-                        <ScrollArea className="h-[240px] flex-grow">
+                        <ScrollArea className="h-auto flex-grow max-h-[240px]">
                             <div className="space-y-1 text-left p-2">
                                 {dscsInSelectedSubBox.map((dsc) => (
                                     <div

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -33,13 +34,14 @@ import type { User } from '@/types';
 interface ImportDataDialogProps {
     trigger: React.ReactNode;
     currentUser: User;
+    onSuccess: () => void;
 }
 
 const USER_CSV_TEMPLATE = 'name,role,password\nJohn Doe,employee,password123\nJane Smith,leader,strongpassword';
 const DSC_CSV_TEMPLATE = 'serialNumber,description,expiryDate (YYYY-MM-DD),currentHolderName,locationMainBox,locationSubBox\nSN001,Finance DSC,2025-12-31,John Doe,1,a';
 
 
-export function ImportDataDialog({ trigger, currentUser }: ImportDataDialogProps) {
+export function ImportDataDialog({ trigger, currentUser, onSuccess }: ImportDataDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [activeTab, setActiveTab] = useState('users');
@@ -64,6 +66,11 @@ export function ImportDataDialog({ trigger, currentUser }: ImportDataDialogProps
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+    }
+
+    const handleSuccess = () => {
+        setIsOpen(false);
+        onSuccess();
     }
 
     return (
@@ -93,7 +100,7 @@ export function ImportDataDialog({ trigger, currentUser }: ImportDataDialogProps
                             importAction={importUsersFromCsvAction}
                             isImporting={isImporting}
                             setIsImporting={setIsImporting}
-                            onSuccess={() => setIsOpen(false)}
+                            onSuccess={handleSuccess}
                             confirmationMessage="This will permanently delete all existing users."
                             actorId={currentUser.id}
                         />
@@ -108,7 +115,7 @@ export function ImportDataDialog({ trigger, currentUser }: ImportDataDialogProps
                             importAction={importDscsFromCsvAction}
                             isImporting={isImporting}
                             setIsImporting={setIsImporting}
-                            onSuccess={() => setIsOpen(false)}
+                            onSuccess={handleSuccess}
                             confirmationMessage="This will permanently delete all existing DSCs."
                             actorId={currentUser.id}
                         />
@@ -122,7 +129,7 @@ export function ImportDataDialog({ trigger, currentUser }: ImportDataDialogProps
                             importAction={importJsonBackupAction}
                             isImporting={isImporting}
                             setIsImporting={setIsImporting}
-                            onSuccess={() => setIsOpen(false)}
+                            onSuccess={handleSuccess}
                             confirmationMessage="This will permanently delete all existing data in the database (users, DSCs, and audit logs)."
                             actorId={currentUser.id}
                         />

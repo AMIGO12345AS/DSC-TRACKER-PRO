@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -28,21 +29,21 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteUserAction } from '@/app/actions';
 import type { User } from '@/types';
 import { Trash2, Edit, ArrowLeft, UserPlus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 
 interface ManageUsersDialogProps {
   users: User[];
   trigger: React.ReactNode;
   currentUser: User;
+  onSuccess: () => void;
 }
 
-export function ManageUsersDialog({ users, trigger, currentUser }: ManageUsersDialogProps) {
+export function ManageUsersDialog({ users, trigger, currentUser, onSuccess }: ManageUsersDialogProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [view, setView] = useState<'list' | 'form'>('list');
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
 
   const handleAddNewUser = () => {
       setUserToEdit(null);
@@ -56,8 +57,9 @@ export function ManageUsersDialog({ users, trigger, currentUser }: ManageUsersDi
 
   const handleDeleteUser = async (userId: string) => {
       const result = await deleteUserAction({ userIdToDelete: userId, actorId: currentUser.id });
-      if (result.message.includes('successfully')) {
+      if (result.success) {
           toast({ title: 'Success', description: result.message });
+          onSuccess();
       } else {
           toast({ variant: 'destructive', title: 'Error', description: result.message });
       }
@@ -66,6 +68,7 @@ export function ManageUsersDialog({ users, trigger, currentUser }: ManageUsersDi
   const handleFormSuccess = () => {
     setView('list');
     setUserToEdit(null);
+    onSuccess();
   };
   
   const handleOpenChange = (open: boolean) => {
@@ -74,6 +77,12 @@ export function ManageUsersDialog({ users, trigger, currentUser }: ManageUsersDi
           setUserToEdit(null);
       }
       setIsDialogOpen(open);
+  }
+
+  const getTooltipMessage = (user: User) => {
+      if(user.id === currentUser.id) return "You cannot delete yourself.";
+      if(user.hasDsc) return "Cannot delete a user who holds a DSC.";
+      return "Delete User";
   }
 
   return (
@@ -128,12 +137,21 @@ export function ManageUsersDialog({ users, trigger, currentUser }: ManageUsersDi
                           <span className="sr-only">Edit User</span>
                         </Button>
                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="icon" disabled={user.hasDsc || user.id === currentUser.id} title={user.hasDsc ? "Cannot delete user with DSC" : "Delete User"}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                                <span className="sr-only">Delete User</span>
-                             </Button>
-                          </AlertDialogTrigger>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" disabled={user.hasDsc || user.id === currentUser.id}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                        <span className="sr-only">Delete User</span>
+                                    </Button>
+                                  </AlertDialogTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                  <p>{getTooltipMessage(user)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <AlertDialogContent>
                               <AlertDialogHeader>
                                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

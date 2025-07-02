@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -13,9 +14,10 @@ interface TopRightQuadrantProps {
   highlightedId: string | null;
   onDscSelect: (dsc: DSC) => void;
   currentUser: User;
+  refetchData: () => void;
 }
 
-export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, currentUser }: TopRightQuadrantProps) {
+export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, currentUser, refetchData }: TopRightQuadrantProps) {
   const [selectedMainBox, setSelectedMainBox] = useState<number | null>(null);
 
   const mainBoxes = Array.from({ length: 8 }, (_, i) => {
@@ -64,6 +66,7 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, cur
         dscs={dscsInSelectedBox}
         currentUser={currentUser}
         onDscSelect={onDscSelect}
+        refetchData={refetchData}
       />
     </>
   );

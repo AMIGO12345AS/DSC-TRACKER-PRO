@@ -1,7 +1,7 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, Edit, Trash2 } from 'lucide-react';
@@ -24,18 +24,19 @@ import {
 import { Button } from '../ui/button';
 import { deleteDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface BottomRightQuadrantProps {
   allDscs: DSC[];
   allUsers: User[];
   currentUser: User;
   onHighlight: (item: { type: 'dsc' | 'employee'; id: string } | null) => void;
+  refetchData: () => void;
 }
 
-export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, onHighlight }: BottomRightQuadrantProps) {
+export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, onHighlight, refetchData }: BottomRightQuadrantProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-  const router = useRouter();
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
@@ -67,10 +68,10 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
       description: dsc.description,
     };
     const result = await deleteDscAction(payload);
-    if (result.message.includes('successfully')) {
+    if (result.success) {
         toast({ title: 'Success', description: result.message });
         setSearchTerm('');
-        router.refresh();
+        refetchData();
     } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
@@ -87,6 +88,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
   
   const onEditSuccess = () => {
       setSearchTerm('');
+      refetchData();
   }
 
   if (!currentUser) {
@@ -138,11 +140,22 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
                             onSuccess={onEditSuccess}
                           />
                            <AlertDialog onOpenChange={(open) => !open && setSearchTerm(searchTerm)}>
-                            <AlertDialogTrigger asChild>
-                               <Button variant="ghost" size="icon" disabled={dsc.status !== 'storage'} title={dsc.status !== 'storage' ? "Cannot delete a DSC in use" : "Delete DSC"}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                               </Button>
-                            </AlertDialogTrigger>
+                            <TooltipProvider>
+                               <Tooltip>
+                                 <TooltipTrigger asChild>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" disabled={dsc.status !== 'storage'}>
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                 </TooltipTrigger>
+                                 {dsc.status !== 'storage' && (
+                                  <TooltipContent>
+                                    <p>Cannot delete a DSC in use.</p>
+                                  </TooltipContent>
+                                 )}
+                               </Tooltip>
+                            </TooltipProvider>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -175,7 +188,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
             <h3 className="font-headline text-2xl">Leader Actions</h3>
           </CardHeader>
           <CardContent>
-            <LeaderActions allUsers={allUsers} currentUser={currentUser} />
+            <LeaderActions allUsers={allUsers} currentUser={currentUser} refetchData={refetchData} />
           </CardContent>
         </Card>
       )}

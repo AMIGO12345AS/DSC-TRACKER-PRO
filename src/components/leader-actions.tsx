@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from './ui/button';
@@ -8,23 +9,25 @@ import { AuditLogDialog } from './audit-log-dialog';
 import { AllDscsDialog } from './all-dscs-dialog';
 import { ImportDataDialog } from './import-data-dialog';
 import { ExportDataDialog } from './export-data-dialog';
-import { Upload, Download, UserPlus, FileClock, List, Edit } from 'lucide-react';
+import { Upload, Download, UserPlus, FileClock, List, FilePlus2 } from 'lucide-react';
 
-export function LeaderActions({ allUsers, currentUser }: { allUsers: User[], currentUser: User }) {
+export function LeaderActions({ allUsers, currentUser, refetchData }: { allUsers: User[], currentUser: User, refetchData: () => void }) {
 
   if (!currentUser) return null;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <ManageDscDialog 
-        trigger={<Button className="w-full"><Edit className="mr-2"/> Add New DSC</Button>}
+        trigger={<Button className="w-full"><FilePlus2 className="mr-2"/> Add New DSC</Button>}
         currentUser={currentUser}
+        onSuccess={refetchData}
       />
       
       <ManageUsersDialog 
         users={allUsers}
         trigger={<Button variant="secondary" className="w-full"><UserPlus className="mr-2"/> Manage Users</Button>}
         currentUser={currentUser}
+        onSuccess={refetchData}
       />
       
       <AuditLogDialog 
@@ -39,6 +42,7 @@ export function LeaderActions({ allUsers, currentUser }: { allUsers: User[], cur
       <ImportDataDialog 
         trigger={<Button variant="outline" className="w-full"><Upload className="mr-2"/> Import Data</Button>}
         currentUser={currentUser}
+        onSuccess={refetchData}
       />
 
       <ExportDataDialog 

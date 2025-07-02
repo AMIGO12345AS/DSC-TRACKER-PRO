@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import TopLeftQuadrant from '@/components/quadrants/top-left';
 import TopRightQuadrant from '@/components/quadrants/top-right';
 import BottomLeftQuadrant from '@/components/quadrants/bottom-left';
@@ -48,20 +49,24 @@ export default function DashboardClient() {
 
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      setIsLoadingData(true);
-      const result = await getDashboardDataAction();
-      if(result.data) {
-        setAllUsers(result.data.users);
-        setDscs(result.data.dscs);
-      } else {
-        // Handle error, maybe show a toast
-        console.error("Failed to fetch dashboard data:", result.message);
-      }
-      setIsLoadingData(false);
+  const refetchData = useCallback(async () => {
+    // Set loading to true only if it's not the initial load, to avoid flashing.
+    setIsLoadingData(dscs.length > 0);
+    const result = await getDashboardDataAction();
+    if(result.data) {
+      setAllUsers(result.data.users);
+      setDscs(result.data.dscs);
+    } else {
+      // Handle error, maybe show a toast
+      console.error("Failed to fetch dashboard data:", result.message);
     }
-    fetchData();
+    setIsLoadingData(false);
+  }, [dscs.length]);
+
+
+  useEffect(() => {
+    refetchData();
+     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -101,7 +106,11 @@ export default function DashboardClient() {
         <ExpiringDscAlert dscs={dscs} currentUser={currentUser} />
         <div className="mt-4 grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
           <div className="h-full min-h-[300px] lg:min-h-0">
-            <TopLeftQuadrant allDscs={dscs} currentUser={currentUser} />
+            <TopLeftQuadrant 
+              allDscs={dscs} 
+              currentUser={currentUser} 
+              refetchData={refetchData} 
+            />
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">
             <TopRightQuadrant 
@@ -109,6 +118,7 @@ export default function DashboardClient() {
               currentUser={currentUser}
               highlightedId={highlightedItem?.type === 'dsc' ? highlightedItem.id : null}
               onDscSelect={(dsc) => handleHighlight({type: 'dsc', id: dsc.location.mainBox.toString()})}
+              refetchData={refetchData}
             />
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">
@@ -123,6 +133,7 @@ export default function DashboardClient() {
               allUsers={allUsers} 
               currentUser={currentUser}
               onHighlight={handleHighlight}
+              refetchData={refetchData}
             />
           </div>
         </div>

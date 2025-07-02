@@ -193,16 +193,16 @@ const DeleteDscPayload = z.object({
   description: z.string(),
 });
 
-export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>): Promise<{ message: string }> {
+export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>): Promise<{ success: boolean; message: string }> {
     const validatedPayload = DeleteDscPayload.safeParse(payload);
     if (!validatedPayload.success) {
-      return { message: 'Invalid payload for delete action.' };
+      return { success: false, message: 'Invalid payload for delete action.' };
     }
     const { dscId, actorId, actorName, serialNumber, description } = validatedPayload.data;
 
     const roleCheck = await verifyLeaderRole(actorId);
     if (!roleCheck.isLeader) {
-        return { message: roleCheck.message ?? '' };
+        return { success: false, message: roleCheck.message ?? '' };
     }
 
     try {
@@ -216,10 +216,10 @@ export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>)
         });
     } catch(error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        return { message: `Database Error: ${errorMessage}.` };
+        return { success: false, message: `Database Error: ${errorMessage}.` };
     }
     revalidatePath('/');
-    return { message: 'DSC deleted successfully.' };
+    return { success: true, message: 'DSC deleted successfully.' };
 }
 
 
@@ -330,32 +330,32 @@ const DeleteUserPayload = z.object({
   actorId: z.string(),
 });
 
-export async function deleteUserAction(payload: z.infer<typeof DeleteUserPayload>): Promise<{ message: string }> {
+export async function deleteUserAction(payload: z.infer<typeof DeleteUserPayload>): Promise<{ success: boolean; message: string }> {
     const validatedPayload = DeleteUserPayload.safeParse(payload);
     if (!validatedPayload.success) {
-      return { message: 'Invalid payload for delete action.' };
+      return { success: false, message: 'Invalid payload for delete action.' };
     }
     const { userIdToDelete, actorId } = validatedPayload.data;
 
     const roleCheck = await verifyLeaderRole(actorId);
     if (!roleCheck.isLeader) {
-        return { message: roleCheck.message ?? '' };
+        return { success: false, message: roleCheck.message ?? '' };
     }
 
     if (!userIdToDelete) {
-        return { message: 'User ID is missing.' };
+        return { success: false, message: 'User ID is missing.' };
     }
     if (userIdToDelete === actorId) {
-        return { message: 'Cannot delete your own user profile while you are acting as them.' };
+        return { success: false, message: 'Cannot delete your own user profile while you are acting as them.' };
     }
     try {
         await deleteUser(userIdToDelete);
     } catch(error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        return { message: `Database Error: ${errorMessage}.` };
+        return { success: false, message: `Database Error: ${errorMessage}.` };
     }
     revalidatePath('/');
-    return { message: 'User deleted successfully.' };
+    return { success: true, message: 'User deleted successfully.' };
 }
 
 
@@ -603,6 +603,7 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
         const { id, password, ...restOfUser } = user;
         
         const userData: Omit<User, 'id'> = { ...restOfUser };
+        // This check is required to prevent build errors on Vercel.
         if (password) {
             userData.password = password;
         }

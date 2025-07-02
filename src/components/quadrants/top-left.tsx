@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,16 +10,15 @@ import { returnDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 
 interface TopLeftQuadrantProps {
   allDscs: DSC[];
   currentUser: User;
+  refetchData: () => void;
 }
 
-export default function TopLeftQuadrant({ allDscs, currentUser }: TopLeftQuadrantProps) {
-  const router = useRouter();
+export default function TopLeftQuadrant({ allDscs, currentUser, refetchData }: TopLeftQuadrantProps) {
   const { toast } = useToast();
   const [isReturning, setIsReturning] = useState(false);
 
@@ -44,7 +44,7 @@ export default function TopLeftQuadrant({ allDscs, currentUser }: TopLeftQuadran
         title: 'Success',
         description: result.message,
       });
-      router.refresh();
+      refetchData();
     } else {
       toast({
         variant: 'destructive',
