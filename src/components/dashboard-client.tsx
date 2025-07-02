@@ -103,7 +103,7 @@ export default function DashboardClient() {
     if (info) {
       highlightTimeoutRef.current = setTimeout(() => {
         setHighlightedInfo(null);
-      }, 3000);
+      }, 5000);
     }
   };
 
@@ -136,7 +136,6 @@ export default function DashboardClient() {
               dscs={dscsInStorage}
               currentUser={currentUser}
               highlightedInfo={highlightedInfo}
-              onDscSelect={(dsc) => handleHighlight({type: 'dsc', id: dsc.location.mainBox.toString()})}
               refetchData={refetchData}
             />
           </div>
@@ -148,7 +147,7 @@ export default function DashboardClient() {
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">
             <BottomRightQuadrant 
-              allDscs={dscs} 
+              allDscs={allDscs} 
               allUsers={allUsers} 
               currentUser={currentUser}
               onHighlight={handleHighlight}
