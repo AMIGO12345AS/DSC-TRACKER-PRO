@@ -22,10 +22,10 @@ function DashboardSkeleton() {
       </header>
       <main className="flex-1 p-4 lg:p-6">
         <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
-          <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-          <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-          <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-          <Card><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+          <Card className="glass-card"><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+          <Card className="glass-card"><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+          <Card className="glass-card"><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
+          <Card className="glass-card"><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
         </div>
       </main>
     </div>
@@ -35,7 +35,7 @@ function DashboardSkeleton() {
 function ErrorDisplay({ message }: { message: string }) {
   return (
     <div className="flex h-full items-center justify-center p-4">
-      <Card className="max-w-lg border-destructive">
+      <Card className="max-w-lg border-destructive glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle />

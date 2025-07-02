@@ -30,7 +30,7 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, cur
 
   return (
     <>
-      <Card className="h-full">
+      <Card className="h-full glass-card">
         <CardHeader>
           <h3 className="font-headline text-2xl">DSC Storage</h3>
         </CardHeader>
@@ -43,7 +43,7 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, cur
                 className={cn(
                     'h-24 w-full flex-col gap-2 p-2 transition-all duration-300',
                     highlightedId === box.id.toString() && 'ring-4 ring-yellow-400',
-                    box.dscCount > 0 ? 'bg-accent/20 hover:bg-accent/30' : 'bg-secondary'
+                    box.dscCount > 0 ? 'bg-primary/10 hover:bg-primary/20' : 'bg-secondary'
                 )}
                 onClick={() => setSelectedMainBox(box.id)}
               >

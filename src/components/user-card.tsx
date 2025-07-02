@@ -19,8 +19,8 @@ export function UserCard({ user, isHighlighted = false }: UserCardProps) {
   return (
     <Card
       className={cn(
-        'transition-all duration-300 min-w-48',
-        isHighlighted && 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-background'
+        'transition-all duration-300 min-w-48 glass-card border-border/50',
+        isHighlighted && 'ring-4 ring-primary/50 ring-offset-2 ring-offset-background'
       )}
     >
       <CardContent className="flex items-center gap-3 p-3">
@@ -41,8 +41,8 @@ export function UserCard({ user, isHighlighted = false }: UserCardProps) {
           <p className="text-xs capitalize text-muted-foreground">{user.role}</p>
         </div>
         {user.hasDsc && (
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent" title="Has DSC">
-            <KeyIcon className="h-4 w-4 text-accent-foreground" />
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/30" title="Has DSC">
+            <KeyIcon className="h-4 w-4 text-green-700" />
           </div>
         )}
       </CardContent>

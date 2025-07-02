@@ -95,7 +95,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <Card className="flex-1">
+      <Card className="flex-1 glass-card">
         <CardHeader>
           <h3 className="font-headline text-2xl">Live DSC Search</h3>
         </CardHeader>
@@ -110,13 +110,13 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
             />
           </div>
           {searchResults.length > 0 && searchTerm && (
-            <Card className="absolute top-full z-10 mt-2 w-full">
+            <Card className="absolute top-full z-10 mt-2 w-full glass-card">
               <ScrollArea className="h-auto max-h-60">
                 <CardContent className="p-2">
                   {searchResults.map((dsc) => (
                     <div
                       key={dsc.id}
-                      className="flex items-center gap-3 rounded-md p-2 hover:bg-secondary group"
+                      className="flex items-center gap-3 rounded-md p-2 hover:bg-secondary/70 group"
                     >
                       <div className="flex-shrink-0 cursor-pointer" onClick={() => handleSelect(dsc)}>
                         <KeyIcon className="h-5 w-5 text-primary" />
@@ -170,7 +170,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
         </CardContent>
       </Card>
       {currentUser.role === 'leader' && (
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <h3 className="font-headline text-2xl">Leader Actions</h3>
           </CardHeader>

@@ -61,7 +61,7 @@ export default function TopLeftQuadrant({ leaders, allDscs, currentUser }: TopLe
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <Card className="flex-1">
+      <Card className="flex-1 glass-card">
         <CardHeader>
           <h3 className="font-headline text-2xl">Leadership</h3>
         </CardHeader>
@@ -73,13 +73,13 @@ export default function TopLeftQuadrant({ leaders, allDscs, currentUser }: TopLe
           </div>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
           <h3 className="font-headline text-2xl">My DSC</h3>
         </CardHeader>
         <CardContent className="flex justify-center p-6">
           {myDsc ? (
-            <div className="flex w-full items-center justify-between rounded-lg border p-4">
+            <div className="flex w-full items-center justify-between rounded-lg border bg-background/50 p-4">
               <div className="flex items-center gap-3">
                 <KeyIcon className="h-6 w-6 text-primary" />
                 <div>

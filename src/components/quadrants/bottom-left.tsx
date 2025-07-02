@@ -10,7 +10,7 @@ interface BottomLeftQuadrantProps {
 
 export default function BottomLeftQuadrant({ employees, highlightedId }: BottomLeftQuadrantProps) {
   return (
-    <Card className="h-full">
+    <Card className="h-full glass-card">
       <CardHeader>
         <CardTitle className="font-headline">Employees</CardTitle>
       </CardHeader>
