@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { KeyIcon } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
@@ -32,8 +34,17 @@ type FormValues = z.infer<typeof formSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, loading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const auth = getAuth(app);
+
+  useEffect(() => {
+    // If auth is done loading and we have a user, we should not be on the login page.
+    // Redirect to the user selection screen.
+    if (!loading && user) {
+      router.replace('/select-user');
+    }
+  }, [user, loading, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -46,12 +57,13 @@ export default function LoginPage() {
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
+      // The redirect is now handled by the useEffect.
+      // We just need to sign in, and the auth state change will trigger the effect.
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({
         title: 'Login Successful',
-        description: "Please select a user profile to continue.",
+        description: "Redirecting...",
       });
-      router.replace('/select-user');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -61,6 +73,16 @@ export default function LoginPage() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  // If we are checking auth state or the user is already logged in, show a loader.
+  // The useEffect will handle the redirection.
+  if (loading || user) {
+      return (
+          <div className="flex min-h-screen items-center justify-center bg-background">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </div>
+      );
   }
 
   return (
