@@ -20,6 +20,20 @@ export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   }
 }
 
+export async function getUserById(userId: string): Promise<User | null> {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    if (userDoc.exists()) {
+      return { ...userDoc.data(), id: userDoc.id } as User;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching user by ID:", error);
+    throw error;
+  }
+}
+
 export async function addUser(userData: Omit<User, 'id' | 'hasDsc'>) {
     const usersCol = collection(db, 'users');
 
@@ -54,14 +68,11 @@ export async function updateUser(userId: string, userData: Partial<Pick<User, 'n
 export async function deleteUser(userId: string) {
   const userRef = doc(db, 'users', userId);
   
-  // This transaction only deletes the Firestore user profile.
-  // It does NOT delete the user from Firebase Authentication.
   await runTransaction(db, async (transaction) => {
     const userDoc = await transaction.get(userRef);
     if (!userDoc.exists()) throw new Error("User not found.");
     if (userDoc.data().hasDsc) throw new Error("Cannot delete a user who is currently holding a DSC.");
     
-    // Delete from Firestore
     transaction.delete(userRef);
   });
 }

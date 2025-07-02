@@ -16,19 +16,21 @@ import { useToast } from '@/hooks/use-toast';
 import { exportDataAction } from '@/app/actions';
 import { Loader2, Download } from 'lucide-react';
 import { format } from 'date-fns';
+import type { User } from '@/types';
 
 interface ExportDataDialogProps {
     trigger: React.ReactNode;
+    currentUser: User;
 }
 
-export function ExportDataDialog({ trigger }: ExportDataDialogProps) {
+export function ExportDataDialog({ trigger, currentUser }: ExportDataDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const { toast } = useToast();
 
     const handleExport = async () => {
         setIsExporting(true);
-        const result = await exportDataAction();
+        const result = await exportDataAction(currentUser.id);
 
         if (result.success && result.data) {
             try {

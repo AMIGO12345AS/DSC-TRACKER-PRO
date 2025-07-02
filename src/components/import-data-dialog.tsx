@@ -18,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,16 +27,18 @@ import { AlertTriangle, Loader2, Upload, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { importJsonBackupAction, importUsersFromCsvAction, importDscsFromCsvAction } from '@/app/actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { User } from '@/types';
 
 interface ImportDataDialogProps {
     trigger: React.ReactNode;
+    currentUser: User;
 }
 
 const USER_CSV_TEMPLATE = 'name,role,password\nJohn Doe,employee,password123\nJane Smith,leader,strongpassword';
 const DSC_CSV_TEMPLATE = 'serialNumber,description,expiryDate (YYYY-MM-DD),currentHolderName,locationMainBox,locationSubBox\nSN001,Finance DSC,2025-12-31,John Doe,1,a';
 
 
-export function ImportDataDialog({ trigger }: ImportDataDialogProps) {
+export function ImportDataDialog({ trigger, currentUser }: ImportDataDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [activeTab, setActiveTab] = useState('users');
@@ -88,12 +89,12 @@ export function ImportDataDialog({ trigger }: ImportDataDialogProps) {
                             description="This will permanently delete all current users and replace them with the data from the CSV file. DSCs and Audit Logs will not be affected."
                             fileType="text/csv"
                             onDownloadTemplate={() => handleDownloadTemplate('user')}
-                            templateFilename="users-import-template.csv"
                             importAction={importUsersFromCsvAction}
                             isImporting={isImporting}
                             setIsImporting={setIsImporting}
                             onSuccess={() => setIsOpen(false)}
                             confirmationMessage="This will permanently delete all existing users."
+                            actorId={currentUser.id}
                         />
                     </TabsContent>
                     
@@ -103,12 +104,12 @@ export function ImportDataDialog({ trigger }: ImportDataDialogProps) {
                             description="This will permanently delete all current DSCs and replace them with the data from the CSV file. Users and Audit Logs will not be affected."
                             fileType="text/csv"
                             onDownloadTemplate={() => handleDownloadTemplate('dsc')}
-                            templateFilename="dscs-import-template.csv"
                             importAction={importDscsFromCsvAction}
                             isImporting={isImporting}
                             setIsImporting={setIsImporting}
                             onSuccess={() => setIsOpen(false)}
                             confirmationMessage="This will permanently delete all existing DSCs."
+                            actorId={currentUser.id}
                         />
                     </TabsContent>
 
@@ -122,6 +123,7 @@ export function ImportDataDialog({ trigger }: ImportDataDialogProps) {
                             setIsImporting={setIsImporting}
                             onSuccess={() => setIsOpen(false)}
                             confirmationMessage="This will permanently delete all existing data in the database (users, DSCs, and audit logs)."
+                            actorId={currentUser.id}
                         />
                     </TabsContent>
                 </Tabs>
@@ -136,15 +138,15 @@ interface ImportTabContentProps {
     description: string;
     fileType: string;
     onDownloadTemplate?: () => void;
-    templateFilename?: string;
-    importAction: (fileContent: string) => Promise<{ success: boolean; message: string; }>;
+    importAction: (fileContent: string, actorId: string) => Promise<{ success: boolean; message: string; }>;
     isImporting: boolean;
     setIsImporting: (isImporting: boolean) => void;
     onSuccess: () => void;
     confirmationMessage: string;
+    actorId: string;
 }
 
-function ImportTabContent({ title, description, fileType, onDownloadTemplate, templateFilename, importAction, isImporting, setIsImporting, onSuccess, confirmationMessage }: ImportTabContentProps) {
+function ImportTabContent({ title, description, fileType, onDownloadTemplate, importAction, isImporting, setIsImporting, onSuccess, confirmationMessage, actorId }: ImportTabContentProps) {
     const [fileContent, setFileContent] = useState<string | null>(null);
     const [fileName, setFileName] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -173,7 +175,7 @@ function ImportTabContent({ title, description, fileType, onDownloadTemplate, te
             return;
         }
         setIsImporting(true);
-        const result = await importAction(fileContent);
+        const result = await importAction(fileContent, actorId);
 
         if (result.success) {
             toast({ title: 'Import Successful', description: result.message });
@@ -195,7 +197,7 @@ function ImportTabContent({ title, description, fileType, onDownloadTemplate, te
                     {description}
                     {onDownloadTemplate && (
                          <Button variant="link" size="sm" className="p-0 h-auto mt-1" onClick={onDownloadTemplate}>
-                            <Download className="mr-2" />
+                            <Download className="mr-2 h-4 w-4" />
                             Download Template
                         </Button>
                     )}
@@ -209,7 +211,7 @@ function ImportTabContent({ title, description, fileType, onDownloadTemplate, te
                  <AlertDialog>
                       <AlertDialogTrigger asChild>
                          <Button disabled={!fileContent || isImporting}>
-                            {isImporting ? <Loader2 className="animate-spin" /> : <Upload />}
+                            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                             Import Data
                          </Button>
                       </AlertDialogTrigger>

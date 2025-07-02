@@ -92,7 +92,6 @@ export default function DashboardClient() {
   const currentUser = selectedUser;
   
   const dscsInStorage = dscs.filter((dsc) => dsc.status === 'storage');
-  const leaders = allUsers.filter(u => u.role === 'leader');
   const employees = allUsers.filter(u => u.role === 'employee');
 
   return (
@@ -102,7 +101,7 @@ export default function DashboardClient() {
         <ExpiringDscAlert dscs={dscs} currentUser={currentUser} />
         <div className="mt-4 grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
           <div className="h-full min-h-[300px] lg:min-h-0">
-            <TopLeftQuadrant leaders={leaders} allDscs={dscs} currentUser={currentUser} />
+            <TopLeftQuadrant allDscs={dscs} currentUser={currentUser} />
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">
             <TopRightQuadrant 

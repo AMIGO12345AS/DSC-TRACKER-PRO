@@ -34,9 +34,10 @@ import { useRouter } from 'next/navigation';
 interface ManageUsersDialogProps {
   users: User[];
   trigger: React.ReactNode;
+  currentUser: User;
 }
 
-export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
+export function ManageUsersDialog({ users, trigger, currentUser }: ManageUsersDialogProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [view, setView] = useState<'list' | 'form'>('list');
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
@@ -54,10 +55,9 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
   };
 
   const handleDeleteUser = async (userId: string) => {
-      const result = await deleteUserAction(userId);
+      const result = await deleteUserAction({ userIdToDelete: userId, actorId: currentUser.id });
       if (result.message.includes('successfully')) {
           toast({ title: 'Success', description: result.message });
-          // No need to router.refresh(), revalidation should handle it.
       } else {
           toast({ variant: 'destructive', title: 'Error', description: result.message });
       }
@@ -66,10 +66,8 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
   const handleFormSuccess = () => {
     setView('list');
     setUserToEdit(null);
-    // No need to router.refresh(), revalidation should handle it.
   };
   
-  // When closing the main dialog, reset the view
   const handleOpenChange = (open: boolean) => {
       if (!open) {
           setView('list');
@@ -94,7 +92,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
                     {view === 'list' ? 'Manage Users' : userToEdit ? 'Edit User' : 'Add New User'}
                 </DialogTitle>
                 <DialogDescription>
-                    {view === 'list' ? "Add, edit, or remove users from the database. These are not login accounts." : "Enter the user's details below."}
+                    {view === 'list' ? "Add, edit, or remove user profiles. Each profile requires a password for selection." : "Enter the user's details below."}
                 </DialogDescription>
              </div>
           </div>
@@ -131,7 +129,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="icon" disabled={user.hasDsc} title={user.hasDsc ? "Cannot delete user with DSC" : "Delete User"}>
+                             <Button variant="ghost" size="icon" disabled={user.hasDsc || user.id === currentUser.id} title={user.hasDsc ? "Cannot delete user with DSC" : "Delete User"}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                                 <span className="sr-only">Delete User</span>
                              </Button>
@@ -160,7 +158,8 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
           </>
         ) : (
            <UserForm 
-            user={userToEdit} 
+            user={userToEdit}
+            currentUser={currentUser}
             onSuccess={handleFormSuccess} 
             onCancel={() => setView('list')}
            />

@@ -20,6 +20,7 @@ import type { User } from '@/types';
 
 type UserFormProps = {
   user?: User | null;
+  currentUser: User;
   onSuccess: () => void;
   onCancel: () => void;
 };
@@ -36,7 +37,7 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
   );
 }
 
-export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
+export function UserForm({ user, currentUser, onSuccess, onCancel }: UserFormProps) {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditing = !!user;
@@ -65,6 +66,8 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   return (
     <form action={dispatch} ref={formRef}>
       {isEditing && <input type="hidden" name="userId" value={user.id} />}
+      <input type="hidden" name="actorId" value={currentUser.id} />
+
       <div className="grid gap-4 py-4">
         <div className="space-y-1">
           <Label htmlFor="name">Full Name</Label>

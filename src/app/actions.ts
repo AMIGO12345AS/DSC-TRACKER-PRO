@@ -2,13 +2,29 @@
 
 import { z } from 'zod';
 import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
-import { addUser, updateUser, deleteUser, getUsers } from '@/services/user';
+import { addUser, updateUser, deleteUser, getUsers, getUserById } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, query, writeBatch, documentId, limit, getDoc } from 'firebase/firestore';
 import Papa from 'papaparse';
+
+
+// Helper function to verify if the acting user has a 'leader' role.
+async function verifyLeaderRole(userId: string): Promise<{ isLeader: boolean; message?: string }> {
+    if (!userId) {
+        return { isLeader: false, message: "Acting user ID is missing." };
+    }
+    const user = await getUserById(userId);
+    if (!user) {
+        return { isLeader: false, message: "Acting user not found." };
+    }
+    if (user.role !== 'leader') {
+        return { isLeader: false, message: "Permission denied. This action requires a leader role." };
+    }
+    return { isLeader: true };
+}
 
 
 const DscSchema = z.object({
@@ -38,6 +54,12 @@ type ActionState = {
 };
 
 export async function addDscAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const actorId = formData.get('actorId') as string;
+  const roleCheck = await verifyLeaderRole(actorId);
+  if (!roleCheck.isLeader) {
+      return { message: roleCheck.message };
+  }
+
   const validatedFields = DscSchema.safeParse({
     description: formData.get('description'),
     serialNumber: formData.get('serialNumber'),
@@ -65,7 +87,7 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
   }
   
   const { description, serialNumber, expiryDate, mainBox, subBox } = validatedFields.data;
-  const { actorId, actorName } = validatedActor.data;
+  const { actorName } = validatedActor.data;
 
   try {
     await addDscToDb({
@@ -84,7 +106,6 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
     });
 
   } catch (error) {
-    console.error(error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return {
       message: `Database Error: ${errorMessage}.`,
@@ -99,6 +120,12 @@ export async function editDscAction(prevState: ActionState, formData: FormData):
   const dscId = formData.get('dscId');
   if (typeof dscId !== 'string' || !dscId) {
     return { message: 'DSC ID is missing.' };
+  }
+  
+  const actorId = formData.get('actorId') as string;
+  const roleCheck = await verifyLeaderRole(actorId);
+  if (!roleCheck.isLeader) {
+      return { message: roleCheck.message };
   }
 
   const validatedFields = DscSchema.safeParse({
@@ -129,7 +156,7 @@ export async function editDscAction(prevState: ActionState, formData: FormData):
   }
 
   const { description, serialNumber, expiryDate, mainBox, subBox } = validatedFields.data;
-  const { actorId, actorName } = validatedActor.data;
+  const { actorName } = validatedActor.data;
 
   try {
     await updateDscInDb(dscId, {
@@ -172,6 +199,11 @@ export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>)
     }
     const { dscId, actorId, actorName, serialNumber, description } = validatedPayload.data;
 
+    const roleCheck = await verifyLeaderRole(actorId);
+    if (!roleCheck.isLeader) {
+        return { message: roleCheck.message };
+    }
+
     try {
         await deleteDscFromDb(dscId);
         await addAuditLog({
@@ -213,6 +245,12 @@ type UserActionState = {
 };
 
 export async function addUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
+  const actorId = formData.get('actorId') as string;
+  const roleCheck = await verifyLeaderRole(actorId);
+  if (!roleCheck.isLeader) {
+      return { message: roleCheck.message };
+  }
+  
   const validatedFields = AddUserSchema.safeParse({
     name: formData.get('name'),
     role: formData.get('role'),
@@ -248,6 +286,12 @@ export async function updateUserAction(prevState: UserActionState, formData: For
       return { message: 'User ID is missing.' };
   }
 
+  const actorId = formData.get('actorId') as string;
+  const roleCheck = await verifyLeaderRole(actorId);
+  if (!roleCheck.isLeader) {
+      return { message: roleCheck.message };
+  }
+
   const validatedFields = UpdateUserSchema.safeParse({
     name: formData.get('name'),
     role: formData.get('role'),
@@ -280,12 +324,31 @@ export async function updateUserAction(prevState: UserActionState, formData: For
 }
 
 
-export async function deleteUserAction(userId: string): Promise<{ message: string }> {
-    if (!userId) {
+const DeleteUserPayload = z.object({
+  userIdToDelete: z.string(),
+  actorId: z.string(),
+});
+
+export async function deleteUserAction(payload: z.infer<typeof DeleteUserPayload>): Promise<{ message: string }> {
+    const validatedPayload = DeleteUserPayload.safeParse(payload);
+    if (!validatedPayload.success) {
+      return { message: 'Invalid payload for delete action.' };
+    }
+    const { userIdToDelete, actorId } = validatedPayload.data;
+
+    const roleCheck = await verifyLeaderRole(actorId);
+    if (!roleCheck.isLeader) {
+        return { message: roleCheck.message };
+    }
+
+    if (!userIdToDelete) {
         return { message: 'User ID is missing.' };
     }
+    if (userIdToDelete === actorId) {
+        return { message: 'Cannot delete your own user profile while you are acting as them.' };
+    }
     try {
-        await deleteUser(userId);
+        await deleteUser(userIdToDelete);
     } catch(error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { message: `Database Error: ${errorMessage}.` };
@@ -401,7 +464,12 @@ export async function getUsersAction(): Promise<{ success: boolean; data?: User[
 
 
 // Action to export all data
-export async function exportDataAction(): Promise<{ success: boolean; data?: { users: User[], dscs: DSC[] }; message?: string; }> {
+export async function exportDataAction(actorId: string): Promise<{ success: boolean; data?: { users: User[], dscs: DSC[] }; message?: string; }> {
+    const roleCheck = await verifyLeaderRole(actorId);
+    if (!roleCheck.isLeader) {
+        return { success: false, message: roleCheck.message };
+    }
+
     try {
         const [users, dscs] = await Promise.all([
             getUsers(),
@@ -484,7 +552,12 @@ async function deleteQueryBatch(q: any, resolve: (value: unknown) => void) {
 
 
 // Action to import JSON backup, overwriting all existing data
-export async function importJsonBackupAction(jsonString: string): Promise<{ success: boolean; message: string; }> {
+export async function importJsonBackupAction(jsonString: string, actorId: string): Promise<{ success: boolean; message: string; }> {
+    const roleCheck = await verifyLeaderRole(actorId);
+    if (!roleCheck.isLeader) {
+        return { success: false, message: roleCheck.message };
+    }
+
     try {
         let parsedData;
         try {
@@ -513,8 +586,6 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
     const { users: importedUsers, dscs: importedDscs } = data;
     
     // This is highly destructive and should be used with caution.
-    // In a real app, you might want to handle this differently.
-    // For now, this assumes a full restore from a known-good state.
     await Promise.all([
         deleteCollection('dscs'),
         deleteCollection('users'),
@@ -549,7 +620,12 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
 }
 
 
-export async function importUsersFromCsvAction(csvString: string): Promise<{ success: boolean; message: string; }> {
+export async function importUsersFromCsvAction(csvString: string, actorId: string): Promise<{ success: boolean; message: string; }> {
+    const roleCheck = await verifyLeaderRole(actorId);
+    if (!roleCheck.isLeader) {
+        return { success: false, message: roleCheck.message };
+    }
+
     try {
         const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
         if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
@@ -576,7 +652,12 @@ export async function importUsersFromCsvAction(csvString: string): Promise<{ suc
 }
 
 
-export async function importDscsFromCsvAction(csvString: string): Promise<{ success: boolean; message: string; }> {
+export async function importDscsFromCsvAction(csvString: string, actorId: string): Promise<{ success: boolean; message: string; }> {
+    const roleCheck = await verifyLeaderRole(actorId);
+    if (!roleCheck.isLeader) {
+        return { success: false, message: roleCheck.message };
+    }
+    
     try {
         const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
         if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
