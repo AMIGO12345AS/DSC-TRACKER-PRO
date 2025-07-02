@@ -34,9 +34,9 @@ export function ManageDscDialog({ dsc, trigger, onSuccess, currentUser }: Manage
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <h3 className="font-headline text-lg">
+          <DialogTitle className="font-headline">
             {isEditing ? 'Edit Digital Signature Certificate' : 'Add New Digital Signature Certificate'}
-          </h3>
+          </DialogTitle>
           <DialogDescription>
             {isEditing ? 'Update the details for this DSC.' : 'Enter the details for the new DSC and assign it to a physical location.'}
           </DialogDescription>
