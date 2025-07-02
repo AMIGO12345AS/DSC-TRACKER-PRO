@@ -26,12 +26,11 @@ interface SubBoxModalProps {
   mainBoxId: number | null;
   dscs: DSC[];
   currentUser: User;
-  onDscSelect: (dsc: DSC) => void;
   refetchData: () => void;
   highlightedInfo: HighlightInfo;
 }
 
-export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onDscSelect, refetchData, highlightedInfo }: SubBoxModalProps) {
+export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, refetchData, highlightedInfo }: SubBoxModalProps) {
   const [selectedDsc, setSelectedDsc] = useState<DSC | null>(null);
   const [selectedSubBox, setSelectedSubBox] = useState<string | null>(null);
   const { toast } = useToast();
@@ -153,7 +152,6 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onD
                                         key={dsc.id}
                                         onClick={() => {
                                           setSelectedDsc(dsc);
-                                          onDscSelect(dsc);
                                         }}
                                         className={cn(
                                             "cursor-pointer rounded-md p-2 hover:bg-secondary",

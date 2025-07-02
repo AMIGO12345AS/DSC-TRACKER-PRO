@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,12 +12,11 @@ import type { HighlightInfo } from '../dashboard-client';
 interface TopRightQuadrantProps {
   dscs: DSC[];
   highlightedInfo: HighlightInfo;
-  onDscSelect: (dsc: DSC) => void;
   currentUser: User;
   refetchData: () => void;
 }
 
-export default function TopRightQuadrant({ dscs, highlightedInfo, onDscSelect, currentUser, refetchData }: TopRightQuadrantProps) {
+export default function TopRightQuadrant({ dscs, highlightedInfo, currentUser, refetchData }: TopRightQuadrantProps) {
   const [selectedMainBox, setSelectedMainBox] = useState<number | null>(null);
 
   useEffect(() => {
@@ -75,7 +73,6 @@ export default function TopRightQuadrant({ dscs, highlightedInfo, onDscSelect, c
         mainBoxId={selectedMainBox}
         dscs={dscsInSelectedBox}
         currentUser={currentUser}
-        onDscSelect={onDscSelect}
         refetchData={refetchData}
         highlightedInfo={highlightedInfo}
       />
