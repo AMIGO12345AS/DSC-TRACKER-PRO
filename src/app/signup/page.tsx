@@ -1,27 +1,23 @@
 'use client';
 
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { KeyIcon } from '@/components/icons';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 export default function SignupPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirect to login page as sign-up is disabled for this application.
+    router.replace('/login');
+  }, [router]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md text-center glass-card">
-        <CardHeader>
-           <KeyIcon className="mx-auto h-10 w-10 text-destructive" />
-          <CardTitle className="mt-4 font-headline">Sign Up Disabled</CardTitle>
-          <CardDescription>
-            New user registration is not available. Please contact an administrator to get access to the system.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Button asChild>
-                <Link href="/login">Return to Login</Link>
-            </Button>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center gap-4 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Sign-up is disabled. Redirecting to login...</p>
+      </div>
     </div>
   );
 }
