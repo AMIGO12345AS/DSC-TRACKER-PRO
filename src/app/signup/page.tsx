@@ -146,7 +146,7 @@ export default function SignupPage() {
             </Link>
           </p>
         </CardContent>
-      </card>
+      </Card>
     </div>
   );
 }
