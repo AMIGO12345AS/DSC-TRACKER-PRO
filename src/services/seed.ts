@@ -1,6 +1,6 @@
 'use server';
 
-import { adminApp, adminDb } from '@/lib/firebaseAdmin';
+import { getAdminDb } from '@/lib/firebaseAdmin';
 
 // Sample Data for automatic seeding
 const usersData = [
@@ -37,12 +37,8 @@ const dscsData = [
 
 
 export async function ensureDatabaseSeeded() {
-    if (!adminApp) {
-        console.log("Admin app not initialized, skipping automatic seeding.");
-        return;
-    }
-
     try {
+        const adminDb = await getAdminDb();
         const usersCollection = adminDb.collection('users');
         const userDocs = await usersCollection.limit(1).get();
         if (userDocs.empty) {
@@ -59,10 +55,14 @@ export async function ensureDatabaseSeeded() {
 
     } catch (error) {
         console.error('Error during automatic database seeding:', error);
+        // We re-throw the error here to make it visible on the frontend during development.
+        // In a production environment, you might want to handle this differently.
+        throw error;
     }
 }
 
 async function seedUsers() {
+    const adminDb = await getAdminDb();
     const usersCollection = adminDb.collection('users');
     const userBatch = adminDb.batch();
 
@@ -79,6 +79,7 @@ async function seedUsers() {
 
 
 async function seedDscs() {
+    const adminDb = await getAdminDb();
     const dscsCollection = adminDb.collection('dscs');
     const dscsBatch = adminDb.batch();
 

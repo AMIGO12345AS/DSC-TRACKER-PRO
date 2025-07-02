@@ -2,9 +2,17 @@
 
 import * as admin from 'firebase-admin';
 
-// Hardcoded service account for reliability in this environment.
-// In a typical production setup, this would come from a secure secret manager.
-function getServiceAccount() {
+let adminApp: admin.app.App | undefined = undefined;
+let adminDb: admin.firestore.Firestore | undefined = undefined;
+
+function initializeAdmin() {
+  if (admin.apps.length > 0) {
+    adminApp = admin.app();
+    adminDb = admin.firestore(adminApp);
+    return;
+  }
+  
+  // Hardcoded service account for reliability in this environment.
   const serviceAccount = {
     "type": "service_account",
     "project_id": "dsc-tracker-app",
@@ -18,35 +26,30 @@ function getServiceAccount() {
     "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40dsc-tracker-app.iam.gserviceaccount.com",
     "universe_domain": "googleapis.com"
   } as admin.ServiceAccount;
-  
-  return serviceAccount;
-}
-
-
-function initializeAdminApp() {
-  // Prevent re-initialization
-  if (admin.apps.length > 0) {
-    return admin.app();
-  }
 
   try {
-    const serviceAccount = getServiceAccount();
-
-    if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
-      throw new Error('Hardcoded service account is missing required fields (project_id, private_key, client_email).');
-    }
-
-    return admin.initializeApp({
+    adminApp = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
+    adminDb = admin.firestore(adminApp);
   } catch (error: any) {
     console.error('Firebase Admin initialization failed:', error.message);
-    // Throw a more informative error.
     throw new Error(
       `Failed to initialize Firebase Admin SDK. Please check your service account configuration. Original error: ${error.message}`
     );
   }
 }
 
-export const adminApp = initializeAdminApp();
-export const adminDb = admin.firestore(adminApp);
+export async function getAdminDb(): Promise<admin.firestore.Firestore> {
+  if (!adminDb) {
+    initializeAdmin();
+  }
+  return adminDb!;
+}
+
+export async function getAdminApp(): Promise<admin.app.App> {
+  if (!adminApp) {
+    initializeAdmin();
+  }
+  return adminApp!;
+}
