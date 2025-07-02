@@ -25,6 +25,7 @@ import { Button } from '../ui/button';
 import { deleteDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface BottomRightQuadrantProps {
   allDscs: DSC[];
@@ -97,7 +98,10 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <Card className="flex-1 glass-card">
+      <Card className={cn(
+        "flex-1 glass-card",
+        searchResults.length > 0 && searchTerm && "relative z-10"
+      )}>
         <CardHeader>
           <h3 className="font-headline text-2xl">Live DSC Search</h3>
         </CardHeader>
@@ -112,7 +116,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
             />
           </div>
           {searchResults.length > 0 && searchTerm && (
-            <Card className="absolute top-full z-50 mt-2 w-full glass-card">
+            <Card className="absolute top-full mt-2 w-full glass-card">
               <ScrollArea className="h-auto max-h-60">
                 <CardContent className="p-2">
                   {searchResults.map((dsc) => (
