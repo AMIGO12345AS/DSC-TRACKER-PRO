@@ -37,7 +37,7 @@ function DashboardSkeleton() {
 
 export default function DashboardClient() {
   const { user: authUser } = useAuth();
-  const { selectedUser } = useUserSession();
+  const { selectedUser, setSelectedUser } = useUserSession();
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [dscs, setDscs] = useState<DSC[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -50,22 +50,36 @@ export default function DashboardClient() {
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const refetchData = useCallback(async () => {
-    // Set loading to true only if it's not the initial load, to avoid flashing.
-    setIsLoadingData(dscs.length > 0);
+    // To prevent flashing UI on re-fetches, we don't set loading to true here
     const result = await getDashboardDataAction();
     if(result.data) {
       setAllUsers(result.data.users);
       setDscs(result.data.dscs);
+
+      // THE FIX: After fetching all data, find the updated data for the
+      // currently selected user and update the session context. This will
+      // trigger a re-render in this component and all children with the fresh user data.
+      if (selectedUser) {
+        const updatedUser = result.data.users.find(u => u.id === selectedUser.id);
+        if (updatedUser) {
+          // This is the key. Update the context itself.
+          setSelectedUser(updatedUser);
+        }
+      }
+
     } else {
-      // Handle error, maybe show a toast
       console.error("Failed to fetch dashboard data:", result.message);
     }
     setIsLoadingData(false);
-  }, [dscs.length]);
+  }, [selectedUser, setSelectedUser]);
 
 
   useEffect(() => {
-    refetchData();
+    // We only want to run the initial fetch. Subsequent fetches are triggered by user actions.
+    if(selectedUser) {
+        setIsLoadingData(true);
+        refetchData();
+    }
      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -94,6 +108,7 @@ export default function DashboardClient() {
   }
 
   // The selectedUser from the session is now our currentUser for all actions
+  // This will be the NEW selectedUser from context after refetchData runs.
   const currentUser = selectedUser;
   
   const dscsInStorage = dscs.filter((dsc) => dsc.status === 'storage');
