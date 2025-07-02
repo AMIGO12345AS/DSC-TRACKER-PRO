@@ -85,6 +85,17 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           </Select>
           {state?.errors?.role && <p className="text-sm text-destructive">{state.errors.role.join(', ')}</p>}
         </div>
+
+        <div className="space-y-1">
+            <Label htmlFor="password">Password</Label>
+            <Input 
+                id="password" 
+                name="password" 
+                type="password" 
+                placeholder={isEditing ? "Leave blank to keep unchanged" : "Enter password"}
+            />
+            {state?.errors?.password && <p className="text-sm text-destructive">{state.errors.password.join(', ')}</p>}
+        </div>
       </div>
       <DialogFooter>
          <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>

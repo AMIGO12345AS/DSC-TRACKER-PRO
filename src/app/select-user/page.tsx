@@ -4,11 +4,17 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/hooks/use-user-session';
 import { useAuth } from '@/hooks/use-auth';
-import { getUsersAction } from '@/app/actions';
+import { getUsersAction, verifyUserPasswordAction } from '@/app/actions';
 import type { User } from '@/types';
 import { UserCard } from '@/components/user-card';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+
 
 export default function SelectUserPage() {
     const router = useRouter();
@@ -16,6 +22,12 @@ export default function SelectUserPage() {
     const { setSelectedUser } = useUserSession();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+
+    const [verifyingUser, setVerifyingUser] = useState<User | null>(null);
+    const [password, setPassword] = useState('');
+    const [isCheckingPassword, setIsCheckingPassword] = useState(false);
+    const [passwordError, setPasswordError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -31,19 +43,40 @@ export default function SelectUserPage() {
                 setUsers(result.data);
             } else {
                 console.error("Failed to fetch users:", result.message);
-                // Optionally show a toast message here
+                toast({ variant: 'destructive', title: "Failed to fetch users", description: result.message });
             }
             setLoading(false);
         }
         if (user) {
             fetchUsers();
         }
-    }, [user]);
+    }, [user, toast]);
 
     const handleUserSelect = (userToSelect: User) => {
-        setSelectedUser(userToSelect);
-        router.push('/');
+        setPassword('');
+        setPasswordError(null);
+        setVerifyingUser(userToSelect);
     };
+
+    const handlePasswordVerification = async () => {
+        if (!verifyingUser) return;
+        setIsCheckingPassword(true);
+        setPasswordError(null);
+
+        const result = await verifyUserPasswordAction({ userId: verifyingUser.id, password: password });
+
+        if (result.success) {
+            setSelectedUser(verifyingUser);
+            router.push('/');
+        } else {
+            setPasswordError(result.message);
+        }
+        setIsCheckingPassword(false);
+    }
+    
+    const handleDialogClose = () => {
+        setVerifyingUser(null);
+    }
     
     if (authLoading || loading) {
         return (
@@ -79,6 +112,35 @@ export default function SelectUserPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={!!verifyingUser} onOpenChange={(open) => !open && handleDialogClose()}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Enter Password for {verifyingUser?.name}</DialogTitle>
+                        <DialogDescription>
+                            Please enter the password for this user profile to proceed.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input 
+                            id="password" 
+                            type="password" 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handlePasswordVerification()}
+                        />
+                        {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleDialogClose}>Cancel</Button>
+                        <Button onClick={handlePasswordVerification} disabled={isCheckingPassword}>
+                            {isCheckingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Proceed
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

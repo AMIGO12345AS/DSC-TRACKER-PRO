@@ -7,7 +7,7 @@ import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, query, writeBatch, documentId, limit } from 'firebase/firestore';
+import { collection, doc, getDocs, query, writeBatch, documentId, limit, getDoc } from 'firebase/firestore';
 import Papa from 'papaparse';
 
 
@@ -191,23 +191,32 @@ export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>)
 
 
 // User Management Actions
-const UserSchema = z.object({
+const AddUserSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   role: z.enum(['leader', 'employee'], { required_error: "Role is required." }),
+  password: z.string().min(4, { message: "Password must be at least 4 characters." }),
+});
+
+const UpdateUserSchema = z.object({
+  name: z.string().min(1, { message: "Name is required." }),
+  role: z.enum(['leader', 'employee'], { required_error: "Role is required." }),
+  password: z.string().min(4, "Password must be at least 4 characters.").optional().or(z.literal('')),
 });
 
 type UserActionState = {
   errors?: {
     name?: string[];
     role?: string[];
+    password?: string[];
   };
   message?: string;
 };
 
 export async function addUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
-  const validatedFields = UserSchema.safeParse({
+  const validatedFields = AddUserSchema.safeParse({
     name: formData.get('name'),
     role: formData.get('role'),
+    password: formData.get('password'),
   });
 
   if (!validatedFields.success) {
@@ -221,6 +230,7 @@ export async function addUserAction(prevState: UserActionState, formData: FormDa
       await addUser({
           name: validatedFields.data.name,
           role: validatedFields.data.role,
+          password: validatedFields.data.password,
       });
   } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -238,9 +248,10 @@ export async function updateUserAction(prevState: UserActionState, formData: For
       return { message: 'User ID is missing.' };
   }
 
-  const validatedFields = UserSchema.safeParse({
+  const validatedFields = UpdateUserSchema.safeParse({
     name: formData.get('name'),
     role: formData.get('role'),
+    password: formData.get('password'),
   });
 
   if (!validatedFields.success) {
@@ -249,9 +260,16 @@ export async function updateUserAction(prevState: UserActionState, formData: For
       message: 'Failed to update user. Please check the fields.',
     };
   }
+  
+  const { name, role, password } = validatedFields.data;
+  const updateData: Partial<User> = { name, role };
+  
+  if (password) {
+      updateData.password = password;
+  }
 
   try {
-    await updateUser(userId, validatedFields.data);
+    await updateUser(userId, updateData);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return { message: `Database Error: ${errorMessage}.` };
@@ -403,6 +421,7 @@ const ImportedJsonDataSchema = z.object({
     name: z.string(),
     role: z.enum(['leader', 'employee']),
     hasDsc: z.boolean(),
+    password: z.string().optional(),
   })),
   dscs: z.array(z.object({
     id: z.string(),
@@ -422,6 +441,7 @@ const ImportedJsonDataSchema = z.object({
 const CsvUserImportSchema = z.object({
   name: z.string().min(1, { message: 'User name is required.' }),
   role: z.enum(['leader', 'employee'], { errorMap: () => ({ message: 'Role must be leader or employee.' }) }),
+  password: z.string().min(1, { message: 'Password is required.' }),
 });
 
 const CsvDscImportSchema = z.object({
@@ -621,4 +641,33 @@ export async function importDscsFromCsvAction(csvString: string): Promise<{ succ
     
     revalidatePath('/');
     return { success: true, message: 'DSCs imported successfully. All previous DSCs have been overwritten.' };
+}
+
+export async function verifyUserPasswordAction(payload: { userId: string; password?: string }): Promise<{ success: boolean; message: string }> {
+  try {
+    if (!payload.password) {
+        return { success: false, message: 'Password is required.' };
+    }
+    const userRef = doc(db, 'users', payload.userId);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      return { success: false, message: 'User not found.' };
+    }
+
+    const user = userDoc.data() as User;
+    
+    if (!user.password) {
+      return { success: false, message: 'This user does not have a password set. Please contact an administrator.' };
+    }
+
+    if (user.password !== payload.password) {
+      return { success: false, message: 'Incorrect password.' };
+    }
+
+    return { success: true, message: 'Login successful.' };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: `Verification failed: ${errorMessage}.` };
+  }
 }

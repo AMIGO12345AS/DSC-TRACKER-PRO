@@ -3,6 +3,7 @@ export interface User {
   name: string;
   role: 'leader' | 'employee';
   hasDsc: boolean; // if they currently hold the DSC
+  password?: string;
 }
 
 export interface DSC {

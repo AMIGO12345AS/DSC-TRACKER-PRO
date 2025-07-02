@@ -33,7 +33,7 @@ interface ImportDataDialogProps {
     trigger: React.ReactNode;
 }
 
-const USER_CSV_TEMPLATE = 'name,role\nJohn Doe,employee\nJane Smith,leader';
+const USER_CSV_TEMPLATE = 'name,role,password\nJohn Doe,employee,password123\nJane Smith,leader,strongpassword';
 const DSC_CSV_TEMPLATE = 'serialNumber,description,expiryDate (YYYY-MM-DD),currentHolderName,locationMainBox,locationSubBox\nSN001,Finance DSC,2025-12-31,John Doe,1,a';
 
 

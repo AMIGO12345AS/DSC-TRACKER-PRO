@@ -37,7 +37,7 @@ export async function addUser(userData: Omit<User, 'id' | 'hasDsc'>) {
 }
 
 
-export async function updateUser(userId: string, userData: Partial<Pick<User, 'name' | 'role'>>) {
+export async function updateUser(userId: string, userData: Partial<Pick<User, 'name' | 'role' | 'password'>>) {
   const userDocRef = doc(db, 'users', userId);
 
   if (userData.name) {
