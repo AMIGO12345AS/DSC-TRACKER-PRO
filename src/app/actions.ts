@@ -126,7 +126,7 @@ export async function editDscAction(prevState: ActionState, formData: FormData):
   const actorId = formData.get('actorId') as string;
   const roleCheck = await verifyLeaderRole(actorId);
   if (!roleCheck.isLeader) {
-      return { message: roleCheck.message };
+      return { message: roleCheck.message ?? '' };
   }
 
   const validatedFields = DscSchema.safeParse({
@@ -202,7 +202,7 @@ export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>)
 
     const roleCheck = await verifyLeaderRole(actorId);
     if (!roleCheck.isLeader) {
-        return { message: roleCheck.message };
+        return { message: roleCheck.message ?? '' };
     }
 
     try {
@@ -249,7 +249,7 @@ export async function addUserAction(prevState: UserActionState, formData: FormDa
   const actorId = formData.get('actorId') as string;
   const roleCheck = await verifyLeaderRole(actorId);
   if (!roleCheck.isLeader) {
-      return { message: roleCheck.message };
+      return { message: roleCheck.message ?? '' };
   }
   
   const validatedFields = AddUserSchema.safeParse({
@@ -289,7 +289,7 @@ export async function updateUserAction(prevState: UserActionState, formData: For
 
   const actorId = formData.get('actorId') as string;
   const roleCheck = await verifyLeaderRole(actorId);
-  if (!roleCheck.isLeader) {
+ if (!roleCheck.isLeader) {
       return { message: roleCheck.message };
   }
 
@@ -339,7 +339,7 @@ export async function deleteUserAction(payload: z.infer<typeof DeleteUserPayload
 
     const roleCheck = await verifyLeaderRole(actorId);
     if (!roleCheck.isLeader) {
-        return { message: roleCheck.message };
+        return { message: roleCheck.message ?? '' };
     }
 
     if (!userIdToDelete) {
@@ -468,7 +468,7 @@ export async function getUsersAction(): Promise<{ success: boolean; data?: User[
 export async function exportDataAction(actorId: string): Promise<{ success: boolean; data?: { users: User[], dscs: DSC[] }; message?: string; }> {
     const roleCheck = await verifyLeaderRole(actorId);
     if (!roleCheck.isLeader) {
-        return { success: false, message: roleCheck.message };
+        return { success: false, message: roleCheck.message ?? '' };
     }
 
     try {
@@ -556,7 +556,7 @@ async function deleteQueryBatch(q: any, resolve: (value: unknown) => void) {
 export async function importJsonBackupAction(jsonString: string, actorId: string): Promise<{ success: boolean; message: string; }> {
     const roleCheck = await verifyLeaderRole(actorId);
     if (!roleCheck.isLeader) {
-        return { success: false, message: roleCheck.message };
+        return { success: false, message: roleCheck.message ?? '' };
     }
 
     try {
@@ -638,7 +638,7 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
 export async function importUsersFromCsvAction(csvString: string, actorId: string): Promise<{ success: boolean; message: string; }> {
     const roleCheck = await verifyLeaderRole(actorId);
     if (!roleCheck.isLeader) {
-        return { success: false, message: roleCheck.message };
+        return { success: false, message: roleCheck.message ?? '' };
     }
 
     try {
@@ -670,7 +670,7 @@ export async function importUsersFromCsvAction(csvString: string, actorId: strin
 export async function importDscsFromCsvAction(csvString: string, actorId: string): Promise<{ success: boolean; message: string; }> {
     const roleCheck = await verifyLeaderRole(actorId);
     if (!roleCheck.isLeader) {
-        return { success: false, message: roleCheck.message };
+        return { success: false, message: roleCheck.message ?? '' };
     }
     
     try {
