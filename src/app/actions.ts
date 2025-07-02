@@ -58,7 +58,7 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
   const actorId = formData.get('actorId') as string;
   const roleCheck = await verifyLeaderRole(actorId);
   if (!roleCheck.isLeader) {
-      return { message: roleCheck.message };
+      return { message: roleCheck.message ?? "" };
   }
 
   const validatedFields = DscSchema.safeParse({
