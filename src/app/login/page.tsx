@@ -52,7 +52,7 @@ export default function LoginPage() {
         title: 'Login Successful',
         description: "Welcome back!",
       });
-      router.push('/');
+      router.replace('/');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -70,7 +70,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <KeyIcon className="mx-auto h-10 w-10 text-primary" />
           <CardTitle className="mt-4 font-headline">Welcome Back</CardTitle>
-          <CardDescription>Sign in to access your CertiTrack dashboard.</CardDescription>
+          <CardDescription>Sign in to access your NRS CertiTrack dashboard.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>

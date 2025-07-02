@@ -70,7 +70,7 @@ export default function SignupPage() {
         description: "You have been successfully signed up.",
       });
       
-      router.push('/');
+      router.replace('/');
 
     } catch (error: any) {
       toast({
@@ -89,7 +89,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <KeyIcon className="mx-auto h-10 w-10 text-primary" />
           <CardTitle className="mt-4 font-headline">Create an Account</CardTitle>
-          <CardDescription>Get started with CertiTrack by creating your account.</CardDescription>
+          <CardDescription>Get started with NRS CertiTrack by creating your account.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -146,7 +146,7 @@ export default function SignupPage() {
             </Link>
           </p>
         </CardContent>
-      </Card>
+      </card>
     </div>
   );
 }
