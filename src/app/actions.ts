@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
-import { updateUser, deleteUser, getUsers, createUserProfile } from '@/services/user';
+import { updateUser, deleteUser, getUsers } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
@@ -195,27 +195,6 @@ const UserSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   role: z.enum(['leader', 'employee'], { required_error: "Role is required." }),
 });
-
-const CreateUserProfileSchema = z.object({
-    uid: z.string().min(1),
-    name: z.string().min(1),
-    email: z.string().email().nullable(),
-});
-
-export async function createUserProfileAction(data: z.infer<typeof CreateUserProfileSchema>): Promise<{ success: boolean; message: string; }> {
-    const validated = CreateUserProfileSchema.safeParse(data);
-    if (!validated.success) {
-        return { success: false, message: 'Invalid user data provided.' };
-    }
-    try {
-        await createUserProfile(validated.data);
-        return { success: true, message: 'User profile created.' };
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        return { success: false, message: `Failed to create profile: ${errorMessage}` };
-    }
-}
-
 
 type UserActionState = {
   errors?: {

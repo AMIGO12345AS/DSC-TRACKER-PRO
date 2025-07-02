@@ -88,7 +88,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
                     {view === 'list' ? 'Manage Users' : userToEdit ? 'Edit User' : 'Add New User'}
                 </DialogTitle>
                 <DialogDescription>
-                    {view === 'list' ? 'Edit or remove users from the system. New users should be added via the Sign Up page.' : 'Update the details below.'}
+                    {view === 'list' ? "Edit or remove existing users. New user accounts must be created by an administrator in the Firebase console." : "Update the user's details below."}
                 </DialogDescription>
              </div>
           </div>

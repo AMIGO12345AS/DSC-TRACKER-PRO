@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/firebase';
 import type { User } from '@/types';
-import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc, addDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, runTransaction, getDoc } from 'firebase/firestore';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -33,39 +33,6 @@ export async function getUserProfile(uid: string): Promise<User | null> {
         throw error;
     }
 }
-
-
-type CreateUserProfileData = {
-    uid: string;
-    name: string;
-    email: string | null;
-};
-
-export async function createUserProfile(userData: CreateUserProfileData) {
-    const { uid, name, email } = userData;
-    const userDocRef = doc(db, 'users', uid);
-
-    // Check if a user with the same name already exists in Firestore
-    const usersColRef = collection(db, 'users');
-    const nameQuery = query(usersColRef, where("name", "==", name));
-    const nameQuerySnapshot = await getDocs(nameQuery);
-    if (!nameQuerySnapshot.empty) {
-        throw new Error(`A user with the name "${name}" already exists.`);
-    }
-
-    const userProfileData = {
-        uid,
-        name,
-        email,
-        role: 'employee', // All new users default to employee
-        hasDsc: false,
-    };
-    
-    await setDoc(userDocRef, userProfileData);
-
-    return userProfileData;
-}
-
 
 export async function updateUser(userId: string, userData: Partial<Pick<User, 'name' | 'role'>>) {
   const userDocRef = doc(db, 'users', userId);
