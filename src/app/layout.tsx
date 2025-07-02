@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'CertiTrack',
+  title: 'NRS CertiTrack',
   description: 'Digital Signature Certificate (DSC) Tracker',
 };
 

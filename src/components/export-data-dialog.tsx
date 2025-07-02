@@ -37,7 +37,7 @@ export function ExportDataDialog({ trigger }: ExportDataDialogProps) {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 const formattedDate = format(new Date(), 'yyyy-MM-dd');
-                link.download = `certitrack-export-${formattedDate}.json`;
+                link.download = `nrs-certitrack-export-${formattedDate}.json`;
                 link.href = url;
                 document.body.appendChild(link);
                 link.click();

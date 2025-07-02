@@ -45,7 +45,7 @@ export function Header({ allUsers, currentUser, setCurrentUser }: HeaderProps) {
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-2">
           <KeyIcon className="h-6 w-6 text-primary" />
-          <h1 className="font-headline text-xl font-bold text-primary">CertiTrack</h1>
+          <h1 className="font-headline text-xl font-bold text-primary">NRS CertiTrack</h1>
         </div>
         <div className="flex items-center gap-4">
             <div className='w-48'>

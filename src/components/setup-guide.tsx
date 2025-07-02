@@ -7,7 +7,7 @@ export default function SetupGuide() {
       <Card className="border-primary shadow-lg">
         <CardHeader className="text-center">
           <Rocket className="mx-auto h-12 w-12 text-primary" />
-          <CardTitle className="mt-4 text-3xl font-headline">Welcome to CertiTrack!</CardTitle>
+          <CardTitle className="mt-4 text-3xl font-headline">Welcome to NRS CertiTrack!</CardTitle>
           <CardDescription className="text-lg">
             Your app is connected to Firebase, but your database is empty. Let's get you set up.
           </CardDescription>
