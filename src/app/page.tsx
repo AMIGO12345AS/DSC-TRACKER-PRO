@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import DashboardClient from '@/components/dashboard-client';
@@ -49,22 +49,24 @@ function DashboardPageContent() {
   const { user, loading, userProfile } = useAuth();
   const router = useRouter();
 
-  if (loading) {
-    return <FullPageLoader />;
-  }
+  useEffect(() => {
+    // This effect handles redirection safely after the component has mounted.
+    // It will only redirect if loading is complete and we can confirm there's no user.
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading, router]);
 
-  if (!user) {
-    // This should ideally not be reached if middleware is active,
-    // but it's a good fallback for client-side protection.
-    router.replace('/login');
+  // While the auth state is loading, or if there's no user yet,
+  // we display a loader. This prevents the dashboard or setup guide from
+  // rendering prematurely.
+  if (loading || !user) {
     return <FullPageLoader />;
   }
   
   if (!userProfile) {
-      // This state means Firebase Auth user exists, but Firestore profile doesn't.
-      // This can happen if signup was interrupted.
-      // A setup guide is a good way to handle this for first-time users.
-      // A more robust app might have a "complete your profile" page.
+      // This state means the Firebase Auth user exists, but their Firestore profile document doesn't.
+      // This can happen if the signup process was interrupted.
       return <SetupGuide isNewUser={true} />;
   }
 
