@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserAction } from '@/app/actions';
+import { addUserAction, updateUserAction } from '@/app/actions';
 import type { User } from '@/types';
 
 type UserFormProps = {
@@ -26,12 +26,12 @@ type UserFormProps = {
 
 const initialState = { message: undefined, errors: {} };
 
-function SubmitButton() {
+function SubmitButton({ isEditing }: { isEditing: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
       {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Save Changes
+      {isEditing ? 'Save Changes' : 'Add User'}
     </Button>
   );
 }
@@ -41,8 +41,7 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const isEditing = !!user;
 
-  // This form is now only for updating users
-  const action = updateUserAction;
+  const action = isEditing ? updateUserAction : addUserAction;
   const [state, dispatch] = useActionState(action, initialState);
 
   useEffect(() => {
@@ -62,22 +61,10 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     }
   }, [state, toast, onSuccess]);
 
-  if (!isEditing) {
-    // Should not happen as "Add User" is removed, but as a fallback
-    return (
-        <div>
-            <p>To add a new user, please use the sign-up page.</p>
-            <DialogFooter className="mt-4">
-                <Button variant="ghost" type="button" onClick={onCancel}>Close</Button>
-            </DialogFooter>
-        </div>
-    );
-  }
-
 
   return (
     <form action={dispatch} ref={formRef}>
-      <input type="hidden" name="userId" value={user.id} />
+      {isEditing && <input type="hidden" name="userId" value={user.id} />}
       <div className="grid gap-4 py-4">
         <div className="space-y-1">
           <Label htmlFor="name">Full Name</Label>
@@ -101,7 +88,7 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       </div>
       <DialogFooter>
          <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
-        <SubmitButton />
+        <SubmitButton isEditing={isEditing} />
       </DialogFooter>
     </form>
   );

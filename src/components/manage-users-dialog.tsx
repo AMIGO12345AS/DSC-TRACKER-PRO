@@ -27,7 +27,7 @@ import { UserForm } from './user-form';
 import { useToast } from '@/hooks/use-toast';
 import { deleteUserAction } from '@/app/actions';
 import type { User } from '@/types';
-import { Trash2, Edit, ArrowLeft } from 'lucide-react';
+import { Trash2, Edit, ArrowLeft, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 
@@ -42,6 +42,11 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+
+  const handleAddNewUser = () => {
+      setUserToEdit(null);
+      setView('form');
+  }
 
   const handleEditUser = (user: User) => {
     setUserToEdit(user);
@@ -88,7 +93,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
                     {view === 'list' ? 'Manage Users' : userToEdit ? 'Edit User' : 'Add New User'}
                 </DialogTitle>
                 <DialogDescription>
-                    {view === 'list' ? "Edit or remove existing users. New user accounts must be created by an administrator in the Firebase console." : "Update the user's details below."}
+                    {view === 'list' ? "Add, edit, or remove users from the database." : "Enter the user's details below."}
                 </DialogDescription>
              </div>
           </div>
@@ -96,6 +101,12 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
         
         {view === 'list' ? (
           <>
+            <div className="mt-4">
+                <Button onClick={handleAddNewUser}>
+                    <UserPlus className="mr-2" />
+                    Add New User
+                </Button>
+            </div>
             <ScrollArea className="h-[300px] border rounded-md mt-4">
               <Table>
                 <TableHeader>
@@ -128,7 +139,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
                               <AlertDialogHeader>
                                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                      This action cannot be undone. This will permanently delete the user's profile from the database, but it will not remove their login credentials from Firebase Authentication. You cannot delete a user who currently holds a DSC.
+                                      This action cannot be undone. This will permanently delete the user's profile from the database. You cannot delete a user who currently holds a DSC.
                                   </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

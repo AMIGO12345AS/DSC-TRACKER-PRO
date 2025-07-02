@@ -3,19 +3,15 @@
 import { createContext, useState, useEffect, ReactNode } from 'react';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { app } from '@/lib/firebase';
-import { getUserProfile } from '@/services/user';
-import type { User as UserProfile } from '@/types';
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
   user: FirebaseUser | null;
-  userProfile: UserProfile | null;
   loading: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  userProfile: null,
   loading: true,
 });
 
@@ -29,25 +25,12 @@ function FullPageLoader() {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        try {
-          const profile = await getUserProfile(firebaseUser.uid);
-          setUserProfile(profile);
-        } catch (error) {
-          console.error("Failed to fetch user profile:", error);
-          setUserProfile(null); // Ensure profile is null on error
-        }
-      } else {
-        setUser(null);
-        setUserProfile(null);
-      }
+      setUser(firebaseUser);
       setLoading(false);
     });
 
@@ -55,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [auth]);
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading }}>
+    <AuthContext.Provider value={{ user, loading }}>
       {loading ? <FullPageLoader /> : children}
     </AuthContext.Provider>
   );

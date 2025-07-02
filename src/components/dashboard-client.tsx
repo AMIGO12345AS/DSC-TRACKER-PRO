@@ -10,7 +10,6 @@ import { Header } from './header';
 import { ExpiringDscAlert } from './expiring-dsc-alert';
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
-import { getDscs, getUsers } from '@/services/dsc';
 import { Loader2 } from 'lucide-react';
 import { getDashboardDataAction } from '@/app/actions';
 
@@ -36,7 +35,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardClient() {
-  const { userProfile: currentUser } = useAuth();
+  const { user } = useAuth();
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [dscs, setDscs] = useState<DSC[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -84,13 +83,22 @@ export default function DashboardClient() {
     }
   };
 
-  if (isLoadingData || !currentUser) {
+  if (isLoadingData || !user) {
     return <DashboardSkeleton />;
   }
+
+  // Create a static admin profile for the person who has logged in.
+  // This user is not stored in the 'users' collection. They are just an operator.
+  const currentUser: User = {
+    id: user.uid,
+    name: user.email || 'Admin',
+    role: 'leader',
+    hasDsc: false, // The operator/admin doesn't hold a DSC themselves.
+  };
   
   const dscsInStorage = dscs.filter((dsc) => dsc.status === 'storage');
-  const leaders = allUsers.filter(user => user.role === 'leader');
-  const employees = allUsers.filter(user => user.role === 'employee');
+  const leaders = allUsers.filter(u => u.role === 'leader');
+  const employees = allUsers.filter(u => u.role === 'employee');
 
   return (
     <div className="flex min-h-screen w-full flex-col">

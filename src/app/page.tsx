@@ -4,10 +4,7 @@ import { Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import DashboardClient from '@/components/dashboard-client';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Loader2 } from 'lucide-react';
-import SetupGuide from '@/components/setup-guide';
+import { Loader2 } from 'lucide-react';
 
 function FullPageLoader() {
   return (
@@ -18,35 +15,8 @@ function FullPageLoader() {
   );
 }
 
-function ErrorDisplay({ message }: { message: string }) {
-  return (
-    <div className="flex h-screen items-center justify-center p-4">
-      <Card className="max-w-lg border-destructive glass-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <AlertTriangle />
-            Application Error
-          </CardTitle>
-          <CardDescription>
-            There was a problem loading the dashboard.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="rounded-md bg-muted p-4 font-mono text-sm text-destructive">
-            {message}
-          </p>
-          <p className="mt-4 text-sm text-muted-foreground">
-            Please check your Firebase project setup, including your Firestore security rules. 
-            If your database is empty, the app may show a setup guide.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 function DashboardPageContent() {
-  const { user, loading, userProfile } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -57,19 +27,12 @@ function DashboardPageContent() {
     }
   }, [user, loading, router]);
 
-  // While the auth state is loading, or if there's no user yet,
-  // we display a loader. This prevents the dashboard or setup guide from
-  // rendering prematurely.
+  // While the auth state is loading, or if there's no user yet (and we're not loading),
+  // we display a loader. This prevents the dashboard from rendering prematurely.
   if (loading || !user) {
     return <FullPageLoader />;
   }
   
-  if (!userProfile) {
-      // This state means the Firebase Auth user exists, but their Firestore profile document doesn't.
-      // This can happen if the signup process was interrupted.
-      return <SetupGuide isNewUser={true} />;
-  }
-
   return (
       <DashboardClient />
   );

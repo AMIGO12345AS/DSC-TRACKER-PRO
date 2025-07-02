@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/firebase';
 import type { User } from '@/types';
-import { collection, getDocs, query, where, doc, updateDoc, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, runTransaction, getDoc, addDoc } from 'firebase/firestore';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -12,7 +12,7 @@ export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
       q = query(usersCol, where('role', '==', role));
     }
     const userSnapshot = await getDocs(q);
-    const userList = userSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, uid: doc.id } as User));
+    const userList = userSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
     return userList;
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -20,19 +20,22 @@ export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   }
 }
 
-export async function getUserProfile(uid: string): Promise<User | null> {
-    try {
-        const userDocRef = doc(db, 'users', uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-            return { id: userDoc.id, uid, ...userDoc.data() } as User;
-        }
-        return null;
-    } catch (error) {
-        console.error("Error fetching user profile:", error);
-        throw error;
+export async function addUser(userData: Omit<User, 'id' | 'hasDsc'>) {
+    const usersCol = collection(db, 'users');
+
+    const q = query(usersCol, where("name", "==", userData.name));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        throw new Error(`A user with the name "${userData.name}" already exists.`);
     }
+
+    const newUser = {
+        ...userData,
+        hasDsc: false,
+    };
+    await addDoc(usersCol, newUser);
 }
+
 
 export async function updateUser(userId: string, userData: Partial<Pick<User, 'name' | 'role'>>) {
   const userDocRef = doc(db, 'users', userId);
@@ -53,8 +56,6 @@ export async function deleteUser(userId: string) {
   
   // This transaction only deletes the Firestore user profile.
   // It does NOT delete the user from Firebase Authentication.
-  // A full user deletion would require the Firebase Admin SDK, which is not used in this project
-  // to maintain stability and avoid server-side initialization issues.
   await runTransaction(db, async (transaction) => {
     const userDoc = await transaction.get(userRef);
     if (!userDoc.exists()) throw new Error("User not found.");

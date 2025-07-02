@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
-import { updateUser, deleteUser, getUsers } from '@/services/user';
+import { addUser, updateUser, deleteUser, getUsers } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
@@ -204,6 +204,33 @@ type UserActionState = {
   message?: string;
 };
 
+export async function addUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
+  const validatedFields = UserSchema.safeParse({
+    name: formData.get('name'),
+    role: formData.get('role'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to add user. Please check the fields.',
+    };
+  }
+  
+  try {
+      await addUser({
+          name: validatedFields.data.name,
+          role: validatedFields.data.role,
+      });
+  } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      return { message: `Database Error: ${errorMessage}.` };
+  }
+
+  revalidatePath('/');
+  return { message: 'User added successfully.' };
+}
+
 
 export async function updateUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
   const userId = formData.get('userId');
@@ -362,7 +389,6 @@ export async function exportDataAction(): Promise<{ success: boolean; data?: { u
 const ImportedJsonDataSchema = z.object({
   users: z.array(z.object({
     id: z.string(),
-    uid: z.string(),
     name: z.string(),
     role: z.enum(['leader', 'employee']),
     hasDsc: z.boolean(),
@@ -469,8 +495,7 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
     // Batch write new users and create ID map
     const oldToNewUserIdMap = new Map<string, string>();
     importedUsers.forEach(user => {
-        // In this simplified import, we assume the UID from the JSON is the one to use.
-        const newUserRef = doc(db, 'users', user.uid);
+        const newUserRef = doc(collection(db, 'users'));
         oldToNewUserIdMap.set(user.id, newUserRef.id);
         const { id, ...userData } = user;
         writeDbBatch.set(newUserRef, userData);
