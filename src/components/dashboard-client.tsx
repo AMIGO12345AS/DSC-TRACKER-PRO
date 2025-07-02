@@ -147,7 +147,7 @@ export default function DashboardClient() {
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">
             <BottomRightQuadrant 
-              allDscs={allDscs} 
+              allDscs={dscs} 
               allUsers={allUsers} 
               currentUser={currentUser}
               onHighlight={handleHighlight}
