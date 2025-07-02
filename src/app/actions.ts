@@ -600,8 +600,13 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
     for (const user of importedUsers) {
         const newUserRef = doc(collection(db, 'users'));
         oldToNewUserIdMap.set(user.id, newUserRef.id);
-        const { id, ...userData } = user;
+        const { id, password, ...restOfUser } = user;
         
+        const userData: Omit<User, 'id'> = { ...restOfUser };
+        if (password) {
+            userData.password = password;
+        }
+
         writeDbBatch.set(newUserRef, userData);
     }
 
