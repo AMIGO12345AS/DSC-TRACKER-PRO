@@ -98,6 +98,7 @@ export function UserForm({ user, currentUser, onSuccess, onCancel }: UserFormPro
                 placeholder={isEditing ? "Leave blank to keep unchanged" : "Enter password"}
             />
             {state?.errors?.password && <p className="text-sm text-destructive">{state.errors.password.join(', ')}</p>}
+            {isEditing && <p className="text-xs text-muted-foreground mt-1">Leave this field blank to keep the current password.</p>}
         </div>
       </div>
       <DialogFooter>

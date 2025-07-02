@@ -3,6 +3,7 @@
 import { db } from '@/lib/firebase';
 import type { User } from '@/types';
 import { collection, getDocs, query, where, doc, updateDoc, runTransaction, getDoc, addDoc } from 'firebase/firestore';
+import * as bcrypt from 'bcryptjs';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -43,10 +44,13 @@ export async function addUser(userData: Omit<User, 'id' | 'hasDsc'>) {
         throw new Error(`A user with the name "${userData.name}" already exists.`);
     }
 
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(userData.password!, salt);
+
     const newUser = {
         name: userData.name,
         role: userData.role,
-        password: userData.password,
+        password: hashedPassword,
         hasDsc: false,
     };
     await addDoc(usersCol, newUser);
@@ -62,6 +66,11 @@ export async function updateUser(userId: string, userData: Partial<Pick<User, 'n
     if (!querySnapshot.empty && querySnapshot.docs.some(d => d.id !== userId)) {
       throw new Error(`Another user with the name "${userData.name}" already exists.`);
     }
+  }
+
+  if (userData.password) {
+    const salt = bcrypt.genSaltSync(10);
+    userData.password = bcrypt.hashSync(userData.password, salt);
   }
 
   await updateDoc(userDocRef, userData);

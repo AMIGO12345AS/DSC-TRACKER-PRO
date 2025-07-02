@@ -92,7 +92,7 @@ export function ManageUsersDialog({ users, trigger, currentUser }: ManageUsersDi
                     {view === 'list' ? 'Manage Users' : userToEdit ? 'Edit User' : 'Add New User'}
                 </DialogTitle>
                 <DialogDescription>
-                    {view === 'list' ? "Add, edit, or remove user profiles. Each profile requires a password for selection." : "Enter the user's details below."}
+                    {view === 'list' ? "Add, edit, or remove user profiles. Passwords are required and stored securely." : "Enter the user's details. Passwords are encrypted and cannot be viewed once set."}
                 </DialogDescription>
              </div>
           </div>
