@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -681,7 +682,12 @@ export async function importDscsFromCsvAction(csvString: string, actorId: string
 
         const allUsersSnapshot = await getDocs(collection(db, 'users'));
         const userNameToIdMap = new Map<string, string>();
-        allUsersSnapshot.forEach(doc => userNameToIdMap.set(doc.data().name, doc.id));
+        allUsersSnapshot.forEach(doc => {
+            const userName = doc.data().name;
+            if (typeof userName === 'string' && userName) {
+                userNameToIdMap.set(userName, doc.id);
+            }
+        });
         
         await deleteCollection('dscs');
         const dscWriteBatch = writeBatch(db);
@@ -696,11 +702,12 @@ export async function importDscsFromCsvAction(csvString: string, actorId: string
             let currentHolderId: string | null = null;
             let status: 'storage' | 'with-employee' = 'storage';
             
-            if (dsc.currentHolderName) {
-                if (userNameToIdMap.has(dsc.currentHolderName)) {
-                    currentHolderId = userNameToIdMap.get(dsc.currentHolderName)!;
+            if (dsc.currentHolderName && typeof dsc.currentHolderName === 'string') {
+                const holderId = userNameToIdMap.get(dsc.currentHolderName);
+                if (holderId) {
+                    currentHolderId = holderId;
                     status = 'with-employee';
-                    const userRef = doc(db, 'users', currentHolderId);
+                    const userRef = doc(db, 'users', holderId);
                     userUpdateBatch.update(userRef, { hasDsc: true });
                 } else {
                     console.warn(`User "${dsc.currentHolderName}" for DSC S/N ${dsc.serialNumber} not found. Storing DSC without a holder.`);
