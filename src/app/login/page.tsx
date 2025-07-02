@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -50,7 +49,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({
         title: 'Login Successful',
-        description: "Welcome back!",
+        description: "Welcome!",
       });
       router.replace('/');
     } catch (error: any) {
@@ -69,8 +68,8 @@ export default function LoginPage() {
       <Card className="w-full max-w-md glass-card">
         <CardHeader className="text-center">
           <KeyIcon className="mx-auto h-10 w-10 text-primary" />
-          <CardTitle className="mt-4 font-headline">Welcome Back</CardTitle>
-          <CardDescription>Sign in to access your NRS CertiTrack dashboard.</CardDescription>
+          <CardTitle className="mt-4 font-headline">NRS CertiTrack Access</CardTitle>
+          <CardDescription>Sign in to manage the DSC dashboard.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -82,7 +81,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="name@example.com" {...field} />
+                      <Input placeholder="admin@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

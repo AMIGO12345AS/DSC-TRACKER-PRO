@@ -57,7 +57,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
       const result = await deleteUserAction(userId);
       if (result.message.includes('successfully')) {
           toast({ title: 'Success', description: result.message });
-          router.refresh();
+          // No need to router.refresh(), revalidation should handle it.
       } else {
           toast({ variant: 'destructive', title: 'Error', description: result.message });
       }
@@ -66,6 +66,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
   const handleFormSuccess = () => {
     setView('list');
     setUserToEdit(null);
+    // No need to router.refresh(), revalidation should handle it.
   };
   
   // When closing the main dialog, reset the view
@@ -93,7 +94,7 @@ export function ManageUsersDialog({ users, trigger }: ManageUsersDialogProps) {
                     {view === 'list' ? 'Manage Users' : userToEdit ? 'Edit User' : 'Add New User'}
                 </DialogTitle>
                 <DialogDescription>
-                    {view === 'list' ? "Add, edit, or remove users from the database." : "Enter the user's details below."}
+                    {view === 'list' ? "Add, edit, or remove users from the database. These are not login accounts." : "Enter the user's details below."}
                 </DialogDescription>
              </div>
           </div>

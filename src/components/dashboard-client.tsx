@@ -10,7 +10,6 @@ import { Header } from './header';
 import { ExpiringDscAlert } from './expiring-dsc-alert';
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2 } from 'lucide-react';
 import { getDashboardDataAction } from '@/app/actions';
 
 function DashboardSkeleton() {
@@ -35,7 +34,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardClient() {
-  const { user } = useAuth();
+  const { user } = useAuth(); // This is the Firebase Auth user
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [dscs, setDscs] = useState<DSC[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -87,13 +86,14 @@ export default function DashboardClient() {
     return <DashboardSkeleton />;
   }
 
-  // Create a static admin profile for the person who has logged in.
-  // This user is not stored in the 'users' collection. They are just an operator.
+  // Create a static, temporary "operator" profile for the person who is logged in.
+  // This user is NOT stored in the 'users' collection. They are just an operator.
+  // Anyone who logs in is considered a 'leader' with full permissions.
   const currentUser: User = {
     id: user.uid,
     name: user.email || 'Admin',
     role: 'leader',
-    hasDsc: false, // The operator/admin doesn't hold a DSC themselves.
+    hasDsc: false, // The operator/admin doesn't hold a DSC themselves in this model.
   };
   
   const dscsInStorage = dscs.filter((dsc) => dsc.status === 'storage');

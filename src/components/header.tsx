@@ -19,11 +19,11 @@ import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 export function Header() {
-  const { userProfile: currentUser } = useAuth();
+  const { user } = useAuth(); // This is the Firebase Auth user (the operator)
   const router = useRouter();
   const auth = getAuth(app);
 
-  if (!currentUser) {
+  if (!user) {
     return (
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center justify-between px-4 md:px-6">
@@ -41,8 +41,8 @@ export function Header() {
     router.push('/login');
   };
 
-  const isLeader = currentUser.role === 'leader';
-  const initial = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : '?';
+  const operatorEmail = user.email || 'Admin';
+  const initial = operatorEmail.charAt(0).toUpperCase();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -56,12 +56,7 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                   <Avatar className="cursor-pointer">
                     <AvatarFallback
-                      className={cn(
-                        'font-semibold',
-                        isLeader
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground'
-                      )}
+                      className='font-semibold bg-primary text-primary-foreground'
                     >
                       {initial}
                     </AvatarFallback>
@@ -70,21 +65,19 @@ export function Header() {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{currentUser.name}</p>
+                    <p className="text-sm font-medium leading-none">{operatorEmail}</p>
                     <p className="text-xs leading-none text-muted-foreground capitalize">
-                      {currentUser.role}
+                      Administrator
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {isLeader && (
                   <NotificationSettingsDialog>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Notification Settings</span>
                     </DropdownMenuItem>
                   </NotificationSettingsDialog>
-                )}
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
