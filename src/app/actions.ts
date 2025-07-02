@@ -609,10 +609,15 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
         const newDscRef = doc(collection(db, 'dscs'));
         const { id, expiryDate, currentHolderId, ...dscData } = dsc;
 
+        let newHolderId: string | null = null;
+        if (typeof currentHolderId === 'string') {
+            newHolderId = oldToNewUserIdMap.get(currentHolderId) ?? null;
+        }
+
         const newDscData: any = {
             ...dscData,
             expiryDate: new Date(expiryDate.seconds ? expiryDate.toDate() : expiryDate),
-            currentHolderId: currentHolderId ? oldToNewUserIdMap.get(currentHolderId) || null : null,
+            currentHolderId: newHolderId,
         };
         writeDbBatch.set(newDscRef, newDscData);
     });
