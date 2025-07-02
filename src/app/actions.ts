@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
-import { addUser, updateUser, deleteUser, getUsers } from '@/services/user';
+import { updateUser, deleteUser, getUsers, createUserProfile } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
 import type { DSC, User } from '@/types';
@@ -196,6 +196,26 @@ const UserSchema = z.object({
   role: z.enum(['leader', 'employee'], { required_error: "Role is required." }),
 });
 
+const CreateUserProfileSchema = z.object({
+    uid: z.string().min(1),
+    name: z.string().min(1),
+    email: z.string().email().nullable(),
+});
+
+export async function createUserProfileAction(data: z.infer<typeof CreateUserProfileSchema>): Promise<{ success: boolean; message: string; }> {
+    const validated = CreateUserProfileSchema.safeParse(data);
+    if (!validated.success) {
+        return { success: false, message: 'Invalid user data provided.' };
+    }
+    try {
+        await createUserProfile(validated.data);
+        return { success: true, message: 'User profile created.' };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Failed to create profile: ${errorMessage}` };
+    }
+}
+
 
 type UserActionState = {
   errors?: {
@@ -205,29 +225,6 @@ type UserActionState = {
   message?: string;
 };
 
-export async function addUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
-  const validatedFields = UserSchema.safeParse({
-    name: formData.get('name'),
-    role: formData.get('role'),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Failed to add user. Please check the fields.',
-    };
-  }
-
-  try {
-    await addUser(validatedFields.data);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return { message: `Database Error: ${errorMessage}.` };
-  }
-
-  revalidatePath('/');
-  return { message: 'User added successfully.' };
-}
 
 export async function updateUserAction(prevState: UserActionState, formData: FormData): Promise<UserActionState> {
   const userId = formData.get('userId');
@@ -352,6 +349,21 @@ export async function getDscsSortedByExpiryAction(): Promise<{ dscs?: DSC[]; err
         return { error: `Database Error: ${errorMessage}.` };
     }
 }
+
+// Action for client-side to fetch all necessary dashboard data at once.
+export async function getDashboardDataAction(): Promise<{ success: boolean; data?: { users: User[], dscs: DSC[] }; message?: string; }> {
+    try {
+        const [users, dscs] = await Promise.all([
+            getUsers(),
+            getDscs()
+        ]);
+        return { success: true, data: { users, dscs } };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Database Error: ${errorMessage}.` };
+    }
+}
+
 
 // Action to export all data
 export async function exportDataAction(): Promise<{ success: boolean; data?: { users: User[], dscs: DSC[] }; message?: string; }> {

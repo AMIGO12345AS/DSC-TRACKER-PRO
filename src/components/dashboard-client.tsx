@@ -9,17 +9,16 @@ import type { DSC, User } from '@/types';
 import { Header } from './header';
 import { ExpiringDscAlert } from './expiring-dsc-alert';
 import { Skeleton } from './ui/skeleton';
-
-interface DashboardClientProps {
-    allUsers: User[];
-    dscs: DSC[];
-}
+import { useAuth } from '@/hooks/use-auth';
+import { getDscs, getUsers } from '@/services/dsc';
+import { Loader2 } from 'lucide-react';
+import { getDashboardDataAction } from '@/app/actions';
 
 function DashboardSkeleton() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="flex h-16 items-center justify-between px-4 md:px-6">
             <Skeleton className="h-8 w-32" />
             <Skeleton className="h-10 w-10 rounded-full" />
         </div>
@@ -36,9 +35,11 @@ function DashboardSkeleton() {
   )
 }
 
-
-export default function DashboardClient({ allUsers, dscs }: DashboardClientProps) {
-  const [currentUser, setCurrentUser] = useState<User | null>(allUsers.find(u => u.role === 'leader') || allUsers[0] || null);
+export default function DashboardClient() {
+  const { userProfile: currentUser } = useAuth();
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [dscs, setDscs] = useState<DSC[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [highlightedItem, setHighlightedItem] = useState<{
     type: 'dsc' | 'employee';
@@ -46,8 +47,23 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
   } | null>(null);
 
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Cleanup timeout on component unmount
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoadingData(true);
+      const result = await getDashboardDataAction();
+      if(result.data) {
+        setAllUsers(result.data.users);
+        setDscs(result.data.dscs);
+      } else {
+        // Handle error, maybe show a toast
+        console.error("Failed to fetch dashboard data:", result.message);
+      }
+      setIsLoadingData(false);
+    }
+    fetchData();
+  }, []);
+
   useEffect(() => {
     return () => {
         if (highlightTimeoutRef.current) {
@@ -68,7 +84,7 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
     }
   };
 
-  if (!currentUser) {
+  if (isLoadingData || !currentUser) {
     return <DashboardSkeleton />;
   }
   
@@ -78,7 +94,7 @@ export default function DashboardClient({ allUsers, dscs }: DashboardClientProps
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <Header allUsers={allUsers} currentUser={currentUser} setCurrentUser={setCurrentUser} />
+      <Header />
       <main className="flex-1 p-4 lg:p-6">
         <ExpiringDscAlert dscs={dscs} currentUser={currentUser} />
         <div className="mt-4 grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">

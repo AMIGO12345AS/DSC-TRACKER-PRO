@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/firebase';
 import type { User } from '@/types';
-import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, runTransaction, getDoc, addDoc, setDoc } from 'firebase/firestore';
 
 export async function getUsers(role?: 'leader' | 'employee'): Promise<User[]> {
   try {
@@ -35,10 +35,15 @@ export async function getUserProfile(uid: string): Promise<User | null> {
 }
 
 
-type AddUserData = Omit<User, 'id' | 'uid' | 'hasDsc'>;
+type CreateUserProfileData = {
+    uid: string;
+    name: string;
+    email: string | null;
+};
 
-export async function addUser(userData: AddUserData) {
-    const { name } = userData;
+export async function createUserProfile(userData: CreateUserProfileData) {
+    const { uid, name, email } = userData;
+    const userDocRef = doc(db, 'users', uid);
 
     // Check if a user with the same name already exists in Firestore
     const usersColRef = collection(db, 'users');
@@ -48,16 +53,17 @@ export async function addUser(userData: AddUserData) {
         throw new Error(`A user with the name "${name}" already exists.`);
     }
 
-    // Create user profile in Firestore
-    const newUserRef = await addDoc(usersColRef, {
-        ...userData,
+    const userProfileData = {
+        uid,
+        name,
+        email,
+        role: 'employee', // All new users default to employee
         hasDsc: false,
-    });
+    };
     
-    // Set the UID to be the same as the document ID
-    await updateDoc(newUserRef, { uid: newUserRef.id });
+    await setDoc(userDocRef, userProfileData);
 
-    return newUserRef.id;
+    return userProfileData;
 }
 
 
@@ -78,6 +84,10 @@ export async function updateUser(userId: string, userData: Partial<Pick<User, 'n
 export async function deleteUser(userId: string) {
   const userRef = doc(db, 'users', userId);
   
+  // This transaction only deletes the Firestore user profile.
+  // It does NOT delete the user from Firebase Authentication.
+  // A full user deletion would require the Firebase Admin SDK, which is not used in this project
+  // to maintain stability and avoid server-side initialization issues.
   await runTransaction(db, async (transaction) => {
     const userDoc = await transaction.get(userRef);
     if (!userDoc.exists()) throw new Error("User not found.");

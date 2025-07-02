@@ -1,40 +1,26 @@
+'use client';
+
 import { Suspense } from 'react';
-import { getDscs } from '@/services/dsc';
-import { getUsers } from '@/services/user';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
 import DashboardClient from '@/components/dashboard-client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import SetupGuide from '@/components/setup-guide';
 
-function DashboardSkeleton() {
+function FullPageLoader() {
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="ml-8 flex items-center gap-2">
-            <Skeleton className="h-8 w-32" />
-          </div>
-          <div className="mr-8 flex items-center">
-            <Skeleton className="h-10 w-24" />
-          </div>
-        </div>
-      </header>
-      <main className="flex-1 p-4 lg:p-6">
-        <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
-          <Card className="glass-card"><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-          <Card className="glass-card"><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-          <Card className="glass-card"><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-          <Card className="glass-card"><CardContent className="p-6"><Skeleton className="h-full w-full" /></CardContent></Card>
-        </div>
-      </main>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background">
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <p className="mt-4 text-muted-foreground">Authenticating...</p>
     </div>
   );
 }
 
 function ErrorDisplay({ message }: { message: string }) {
   return (
-    <div className="flex h-full items-center justify-center p-4">
+    <div className="flex h-screen items-center justify-center p-4">
       <Card className="max-w-lg border-destructive glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
@@ -59,37 +45,38 @@ function ErrorDisplay({ message }: { message: string }) {
   );
 }
 
+function DashboardPageContent() {
+  const { user, loading, userProfile } = useAuth();
+  const router = useRouter();
 
-async function DashboardData() {
-  try {
-    // The ensureDatabaseSeeded() call has been removed to prevent server startup errors.
-    // The app now relies on the SetupGuide component to instruct the user if the database is empty.
-    const [users, dscs] = await Promise.all([
-      getUsers(),
-      getDscs()
-    ]);
-    
-    if (users.length === 0) {
-      return <SetupGuide />;
-    }
-
-    return (
-      <DashboardClient
-        allUsers={users}
-        dscs={dscs}
-      />
-    );
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return <ErrorDisplay message={errorMessage} />;
+  if (loading) {
+    return <FullPageLoader />;
   }
-}
 
+  if (!user) {
+    // This should ideally not be reached if middleware is active,
+    // but it's a good fallback for client-side protection.
+    router.replace('/login');
+    return <FullPageLoader />;
+  }
+  
+  if (!userProfile) {
+      // This state means Firebase Auth user exists, but Firestore profile doesn't.
+      // This can happen if signup was interrupted.
+      // A setup guide is a good way to handle this for first-time users.
+      // A more robust app might have a "complete your profile" page.
+      return <SetupGuide isNewUser={true} />;
+  }
+
+  return (
+      <DashboardClient />
+  );
+}
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardData />
+    <Suspense fallback={<FullPageLoader />}>
+      <DashboardPageContent />
     </Suspense>
   );
 }

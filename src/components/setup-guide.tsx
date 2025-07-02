@@ -1,7 +1,33 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Rocket, ListChecks, Users, KeyRound } from 'lucide-react';
+import { Rocket, ListChecks, Users, KeyRound, UserPlus } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from './ui/button';
 
-export default function SetupGuide() {
+export default function SetupGuide({ isNewUser }: { isNewUser?: boolean }) {
+  if (isNewUser) {
+    return (
+       <div className="container mx-auto max-w-4xl py-10">
+        <Card className="border-primary shadow-lg">
+          <CardHeader className="text-center">
+            <UserPlus className="mx-auto h-12 w-12 text-primary" />
+            <CardTitle className="mt-4 text-3xl font-headline">Welcome to NRS CertiTrack!</CardTitle>
+            <CardDescription className="text-lg">
+              Your login was successful, but your user profile hasn't been set up in the database yet.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 text-center">
+             <p className="text-muted-foreground">
+              This can happen if the sign-up process was interrupted. Please contact a system administrator to have them assign you a role. Once your profile is created, you will be able to access the dashboard.
+            </p>
+            <Link href="/login">
+                <Button variant="outline">Back to Login</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+  
   return (
     <div className="container mx-auto max-w-4xl py-10">
       <Card className="border-primary shadow-lg">
@@ -19,64 +45,31 @@ export default function SetupGuide() {
               Your Next Steps
             </h3>
             <p className="text-muted-foreground">
-              You need to create two collections in your Firestore database: `users` and `dscs`. Follow the steps below in your Firebase Console.
+              The application requires at least one 'leader' user to function correctly. You can create your first user account through the sign-up page.
+            </p>
+            <div className="pt-4 text-center">
+                <Link href="/signup">
+                    <Button>Create First User Account</Button>
+                </Link>
+            </div>
+            <p className="pt-4 text-muted-foreground">
+              After creating your first user, you will need to manually promote them to a 'leader' in the Firestore database.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="space-y-4 rounded-lg border p-4">
-              <h4 className="flex items-center gap-2 font-bold">
-                <Users className="h-5 w-5" />
-                Step 1: Create 'users' Collection
-              </h4>
-              <ol className="list-inside list-decimal space-y-2 text-sm">
-                <li>Go to your Firestore Database in the Firebase Console.</li>
-                <li>Click <strong>+ Start collection</strong>.</li>
-                <li>For Collection ID, enter: <strong>users</strong></li>
-                <li>Click <strong>Auto-ID</strong> for the Document ID.</li>
-                <li>Add these fields:
-                  <ul className="ml-4 mt-2 list-disc space-y-1">
-                    <li>`name` (string): `Sample Leader`</li>
-                    <li>`role` (string): `leader`</li>
-                    <li>`hasDsc` (boolean): `false`</li>
-                  </ul>
-                </li>
-                <li>Click <strong>Save</strong>. You've added your first user!</li>
-              </ol>
-            </div>
-
-            <div className="space-y-4 rounded-lg border p-4">
-              <h4 className="flex items-center gap-2 font-bold">
-                <KeyRound className="h-5 w-5" />
-                Step 2: Create 'dscs' Collection
-              </h4>
-              <ol className="list-inside list-decimal space-y-2 text-sm">
-                <li>Click <strong>+ Start collection</strong> again.</li>
-                <li>For Collection ID, enter: <strong>dscs</strong></li>
-                <li>Click <strong>Auto-ID</strong> for the Document ID.</li>
-                <li>Add these fields:
-                  <ul className="ml-4 mt-2 list-disc space-y-1">
-                    <li>`serialNumber` (string): `SN0001`</li>
-                    <li>`description` (string): `Initial Sample DSC`</li>
-                    <li>`status` (string): `storage`</li>
-                    <li>`expiryDate` (timestamp): Set to a future date.</li>
-                    <li>`currentHolderId` (string): `null` (leave value blank)</li>
-                    <li>`location` (map): Add two fields inside:
-                        <ul className="ml-4 list-disc">
-                            <li>`mainBox` (number): `1`</li>
-                            <li>`subBox` (string): `a`</li>
-                        </ul>
-                    </li>
-                  </ul>
-                </li>
-                <li>Click <strong>Save</strong>.</li>
-              </ol>
-            </div>
-          </div>
-
-          <div className="mt-6 text-center">
-            <p className="font-semibold">Once you've added one document to each collection, refresh this page.</p>
-            <p className="text-sm text-muted-foreground">The app will then display the main dashboard.</p>
+          <div className="space-y-4 rounded-lg border p-4">
+            <h4 className="flex items-center gap-2 font-bold">
+              <Users className="h-5 w-5" />
+              Promote User to Leader
+            </h4>
+            <ol className="list-inside list-decimal space-y-2 text-sm">
+              <li>Go to your Firestore Database in the Firebase Console.</li>
+              <li>Open the <strong>users</strong> collection.</li>
+              <li>Find the document for the user you just created.</li>
+              <li>Edit the `role` field from `employee` to `leader`.</li>
+              <li>Click <strong>Update</strong>.</li>
+              <li>Once complete, refresh this page to access the dashboard.</li>
+            </ol>
           </div>
         </CardContent>
       </Card>

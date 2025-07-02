@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,34 +12,38 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { KeyIcon } from './icons';
 import { NotificationSettingsDialog } from './settings/notification-settings-dialog';
-import type { User } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { getAuth, signOut } from 'firebase/auth';
+import { app } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
+export function Header() {
+  const { userProfile: currentUser } = useAuth();
+  const router = useRouter();
+  const auth = getAuth(app);
 
-interface HeaderProps {
-    allUsers: User[];
-    currentUser: User;
-    setCurrentUser: (user: User) => void;
-}
+  if (!currentUser) {
+    return (
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-16 items-center justify-between px-4 md:px-6">
+            <div className="flex items-center gap-2">
+                <KeyIcon className="h-6 w-6 text-primary" />
+                <h1 className="font-headline text-xl font-bold text-primary">NRS CertiTrack</h1>
+            </div>
+        </div>
+      </header>
+    );
+  }
 
-export function Header({ allUsers, currentUser, setCurrentUser }: HeaderProps) {
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
+
   const isLeader = currentUser.role === 'leader';
   const initial = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : '?';
 
-  const handleUserChange = (userId: string) => {
-    const user = allUsers.find(u => u.id === userId);
-    if (user) {
-      setCurrentUser(user);
-    }
-  };
-  
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
@@ -48,34 +52,6 @@ export function Header({ allUsers, currentUser, setCurrentUser }: HeaderProps) {
           <h1 className="font-headline text-xl font-bold text-primary">NRS CertiTrack</h1>
         </div>
         <div className="flex items-center gap-4">
-            <div className='w-48'>
-                <Select value={currentUser.id} onValueChange={handleUserChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Switch user..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                     {allUsers.map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                            <div className='flex items-center gap-2'>
-                               <Avatar className='h-6 w-6'>
-                                 <AvatarFallback
-                                    className={cn(
-                                        'font-semibold text-xs',
-                                        user.role === 'leader'
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-secondary text-secondary-foreground'
-                                    )}
-                                    >
-                                    {user.name.charAt(0).toUpperCase()}
-                                 </AvatarFallback>
-                               </Avatar>
-                               <span>{user.name}</span>
-                            </div>
-                        </SelectItem>
-                     ))}
-                  </SelectContent>
-                </Select>
-            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                   <Avatar className="cursor-pointer">
@@ -109,6 +85,10 @@ export function Header({ allUsers, currentUser, setCurrentUser }: HeaderProps) {
                     </DropdownMenuItem>
                   </NotificationSettingsDialog>
                 )}
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
         </div>
