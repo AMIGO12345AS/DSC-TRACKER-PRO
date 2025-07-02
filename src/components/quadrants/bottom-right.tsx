@@ -112,7 +112,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
             />
           </div>
           {searchResults.length > 0 && searchTerm && (
-            <Card className="absolute top-full z-10 mt-2 w-full glass-card">
+            <Card className="absolute top-full z-50 mt-2 w-full glass-card">
               <ScrollArea className="h-auto max-h-60">
                 <CardContent className="p-2">
                   {searchResults.map((dsc) => (
