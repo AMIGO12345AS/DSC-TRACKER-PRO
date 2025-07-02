@@ -9,6 +9,7 @@ import type { DSC, User } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, query, writeBatch, documentId, limit, getDoc } from 'firebase/firestore';
 import Papa from 'papaparse';
+import * as bcrypt from 'bcryptjs';
 
 
 // Helper function to verify if the acting user has a 'leader' role.
@@ -596,12 +597,18 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
 
     // Batch write new users and create ID map
     const oldToNewUserIdMap = new Map<string, string>();
-    importedUsers.forEach(user => {
+    for (const user of importedUsers) {
         const newUserRef = doc(collection(db, 'users'));
         oldToNewUserIdMap.set(user.id, newUserRef.id);
         const { id, ...userData } = user;
+        
+        // Hash password if it exists in the backup
+        if (userData.password) {
+            userData.password = await bcrypt.hash(userData.password, 10);
+        }
+        
         writeDbBatch.set(newUserRef, userData);
-    });
+    }
 
     // Batch write new DSCs
     importedDscs.forEach(dsc => {
@@ -742,7 +749,9 @@ export async function verifyUserPasswordAction(payload: { userId: string; passwo
       return { success: false, message: 'This user does not have a password set. Please contact an administrator.' };
     }
 
-    if (user.password !== payload.password) {
+    const passwordMatch = await bcrypt.compare(payload.password, user.password);
+
+    if (!passwordMatch) {
       return { success: false, message: 'Incorrect password.' };
     }
 
