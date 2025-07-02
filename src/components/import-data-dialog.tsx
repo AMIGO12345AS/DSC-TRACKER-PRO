@@ -210,7 +210,7 @@ function ImportTabContent({ title, description, fileType, onDownloadTemplate, im
              <div className="flex justify-end pt-4">
                  <AlertDialog>
                       <AlertDialogTrigger asChild>
-                         <Button disabled={!fileContent || isImporting}>
+                         <Button disabled={!fileContent || isImporting} asChild>
                             {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                             Import Data
                          </Button>
