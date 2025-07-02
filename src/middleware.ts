@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getAuth } from 'firebase-admin/auth';
-import { cookies } from 'next/headers';
 
 // This middleware is currently handled on the client-side within AuthProvider
 // to avoid issues with Firebase Admin SDK initialization during build/edge execution.
@@ -15,7 +14,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next()
     }
 
-    const session = cookies().get('session')?.value
+    const session = request.cookies.get('session')?.value
 
     // If no session, redirect to login
     if (!session) {
