@@ -1,40 +1,13 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getAuth } from 'firebase-admin/auth';
 
 // This middleware is currently handled on the client-side within AuthProvider
 // to avoid issues with Firebase Admin SDK initialization during build/edge execution.
 // A server-side middleware would be the most secure approach for a large-scale production app,
 // but the current method provides robust security for this application's scope.
-export async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl
-    
-    // Allow access to login, signup, and static assets
-    if (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/_next') || pathname.startsWith('/static')) {
-        return NextResponse.next()
-    }
-
-    const session = request.cookies.get('session')?.value
-
-    // If no session, redirect to login
-    if (!session) {
-        return NextResponse.redirect(new URL('/login', request.url))
-    }
-    
-    // This is where you would verify the session token with Firebase Admin SDK
-    // For this project, we are relying on client-side auth state checks.
-    // If you add Firebase Admin, you would uncomment and complete this logic.
-    /*
-    try {
-        const decodedIdToken = await getAuth().verifySessionCookie(session, true);
-        // User is authenticated, continue
-        return NextResponse.next();
-    } catch (error) {
-        // Session is invalid, redirect to login
-        return NextResponse.redirect(new URL('/login', request.url))
-    }
-    */
-    
+export function middleware(request: NextRequest) {
+    // For this application, all auth logic is handled on the client side.
+    // This middleware is effectively a placeholder. The faulty redirect logic has been removed.
     return NextResponse.next()
 }
 
