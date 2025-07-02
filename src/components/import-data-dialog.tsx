@@ -18,6 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -209,12 +210,12 @@ function ImportTabContent({ title, description, fileType, onDownloadTemplate, im
             </div>
              <div className="flex justify-end pt-4">
                  <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                         <DialogTrigger asChild>
-                            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                            Import Data
-                         </Button>
-                      </AlertDialogTrigger>
+<AlertDialogTrigger asChild>
+  <Button disabled={!fileContent || isImporting} asChild>
+    {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+    Import Data
+  </Button>
+</AlertDialogTrigger>
                       <AlertDialogContent>
                           <AlertDialogHeader>
                               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
