@@ -610,8 +610,11 @@ async function processJsonImport(data: z.infer<typeof ImportedJsonDataSchema>) {
         const { id, expiryDate, currentHolderId, ...dscData } = dsc;
 
         let newHolderId: string | null = null;
-        if (typeof currentHolderId === 'string') {
-            newHolderId = oldToNewUserIdMap.get(currentHolderId) ?? null;
+        if (currentHolderId && typeof currentHolderId === 'string') {
+            const mappedId = oldToNewUserIdMap.get(currentHolderId);
+            if (mappedId) {
+                newHolderId = mappedId;
+            }
         }
 
         const newDscData: any = {
