@@ -10,6 +10,7 @@ import { Header } from './header';
 import { ExpiringDscAlert } from './expiring-dsc-alert';
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
+import { useUserSession } from '@/hooks/use-user-session';
 import { getDashboardDataAction } from '@/app/actions';
 
 function DashboardSkeleton() {
@@ -34,7 +35,8 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardClient() {
-  const { user } = useAuth(); // This is the Firebase Auth user
+  const { user: authUser } = useAuth();
+  const { selectedUser } = useUserSession();
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [dscs, setDscs] = useState<DSC[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -82,19 +84,12 @@ export default function DashboardClient() {
     }
   };
 
-  if (isLoadingData || !user) {
+  if (isLoadingData || !authUser || !selectedUser) {
     return <DashboardSkeleton />;
   }
 
-  // Create a static, temporary "operator" profile for the person who is logged in.
-  // This user is NOT stored in the 'users' collection. They are just an operator.
-  // Anyone who logs in is considered a 'leader' with full permissions.
-  const currentUser: User = {
-    id: user.uid,
-    name: user.email || 'Admin',
-    role: 'leader',
-    hasDsc: false, // The operator/admin doesn't hold a DSC themselves in this model.
-  };
+  // The selectedUser from the session is now our currentUser for all actions
+  const currentUser = selectedUser;
   
   const dscsInStorage = dscs.filter((dsc) => dsc.status === 'storage');
   const leaders = allUsers.filter(u => u.role === 'leader');

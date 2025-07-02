@@ -370,6 +370,17 @@ export async function getDashboardDataAction(): Promise<{ success: boolean; data
     }
 }
 
+// Action for client-side to fetch users for selection screen.
+export async function getUsersAction(): Promise<{ success: boolean; data?: User[]; message?: string; }> {
+    try {
+        const users = await getUsers();
+        return { success: true, data: users };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Database Error: ${errorMessage}.` };
+    }
+}
+
 
 // Action to export all data
 export async function exportDataAction(): Promise<{ success: boolean; data?: { users: User[], dscs: DSC[] }; message?: string; }> {

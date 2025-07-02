@@ -49,9 +49,9 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({
         title: 'Login Successful',
-        description: "Welcome!",
+        description: "Please select a user profile to continue.",
       });
-      router.replace('/');
+      router.replace('/select-user');
     } catch (error: any) {
       toast({
         variant: 'destructive',
