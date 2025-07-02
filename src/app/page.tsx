@@ -5,7 +5,6 @@ import DashboardClient from '@/components/dashboard-client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle } from 'lucide-react';
-import { ensureDatabaseSeeded } from '@/services/seed';
 import SetupGuide from '@/components/setup-guide';
 
 function DashboardSkeleton() {
@@ -63,8 +62,8 @@ function ErrorDisplay({ message }: { message: string }) {
 
 async function DashboardData() {
   try {
-    await ensureDatabaseSeeded();
-
+    // The ensureDatabaseSeeded() call has been removed to prevent server startup errors.
+    // The app now relies on the SetupGuide component to instruct the user if the database is empty.
     const [users, dscs] = await Promise.all([
       getUsers(),
       getDscs()
