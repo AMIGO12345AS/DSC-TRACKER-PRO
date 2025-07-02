@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -34,7 +35,7 @@ export function AllDscsDialog({ trigger, allUsers }: AllDscsDialogProps) {
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
-    if (open && dscs.length === 0) {
+    if (open) {
       setIsLoading(true);
       const result = await getDscsSortedByExpiryAction();
       if (result.dscs) {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -31,7 +32,7 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
-    if (open && logs.length === 0) {
+    if (open) {
       setIsLoading(true);
       const result = await getAuditLogsAction();
       if (result.logs) {

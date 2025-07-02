@@ -643,24 +643,11 @@ export async function importUsersFromCsvAction(csvString: string, actorId: strin
     }
 
     try {
-        const parsedCsv = Papa.parse(csvString, { header: true, skipEmptyLines: true });
-        if (parsedCsv.errors.length > 0) throw new Error(`CSV parsing error: ${parsedCsv.errors[0].message}`);
-
-        const validatedUsersResult = z.array(CsvUserImportSchema).safeParse(parsedCsv.data);
-        if (!validatedUsersResult.success) throw new Error(`Invalid user data in CSV: ${validatedUsersResult.error.errors[0].message}`);
-
-        const userNames = new Set<string>();
-        for (const user of validatedUsersResult.data) {
-            if (userNames.has(user.name)) throw new Error(`Duplicate user name found in CSV file: "${user.name}". User names must be unique.`);
-            userNames.add(user.name);
-        }
-
         // This action is now too destructive as it doesn't handle Auth users.
         // It's recommended to add users one by one through the UI to create their auth credentials.
         // I'm disabling this to prevent data inconsistency.
-        throw new Error("CSV User import is disabled. Please add users through the 'Manage Users' dialog to create their login credentials.");
-
-
+        return { success: false, message: "CSV User import is disabled. Please add users through the 'Manage Users' dialog to create their login credentials." };
+        
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         return { success: false, message: `User import failed: ${errorMessage}.` };
