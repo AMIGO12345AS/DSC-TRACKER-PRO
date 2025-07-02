@@ -1,24 +1,34 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SubBoxModal } from '../sub-box-modal';
 import type { DSC, User } from '@/types';
 import { cn } from '@/lib/utils';
 import { KeyRound } from 'lucide-react';
+import type { HighlightInfo } from '../dashboard-client';
 
 interface TopRightQuadrantProps {
   dscs: DSC[];
-  highlightedId: string | null;
+  highlightedInfo: HighlightInfo;
   onDscSelect: (dsc: DSC) => void;
   currentUser: User;
   refetchData: () => void;
 }
 
-export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, currentUser, refetchData }: TopRightQuadrantProps) {
+export default function TopRightQuadrant({ dscs, highlightedInfo, onDscSelect, currentUser, refetchData }: TopRightQuadrantProps) {
   const [selectedMainBox, setSelectedMainBox] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (highlightedInfo?.type === 'dsc' && highlightedInfo.id) {
+      const boxId = parseInt(highlightedInfo.id, 10);
+      if (!isNaN(boxId)) {
+        setSelectedMainBox(boxId);
+      }
+    }
+  }, [highlightedInfo]);
 
   const mainBoxes = Array.from({ length: 8 }, (_, i) => {
     const boxId = i + 1;
@@ -44,7 +54,7 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, cur
                 variant="outline"
                 className={cn(
                     'h-24 w-full flex-col gap-2 p-2 transition-all duration-300',
-                    highlightedId === box.id.toString() && 'ring-4 ring-yellow-400',
+                    highlightedInfo?.type === 'dsc' && highlightedInfo.id === box.id.toString() && 'ring-4 ring-primary/50 ring-offset-2 ring-offset-background',
                     box.dscCount > 0 ? 'bg-primary/10 hover:bg-primary/20' : 'bg-secondary'
                 )}
                 onClick={() => setSelectedMainBox(box.id)}
@@ -67,6 +77,7 @@ export default function TopRightQuadrant({ dscs, highlightedId, onDscSelect, cur
         currentUser={currentUser}
         onDscSelect={onDscSelect}
         refetchData={refetchData}
+        highlightedInfo={highlightedInfo}
       />
     </>
   );

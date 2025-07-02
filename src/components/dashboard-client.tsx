@@ -35,6 +35,13 @@ function DashboardSkeleton() {
   )
 }
 
+export type HighlightInfo = {
+  type: 'dsc' | 'employee';
+  id: string;
+  subBoxId?: string;
+  dscId?: string;
+} | null;
+
 export default function DashboardClient() {
   const { user: authUser } = useAuth();
   const { selectedUser, setSelectedUser } = useUserSession();
@@ -42,10 +49,7 @@ export default function DashboardClient() {
   const [dscs, setDscs] = useState<DSC[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const [highlightedItem, setHighlightedItem] = useState<{
-    type: 'dsc' | 'employee';
-    id: string;
-  } | null>(null);
+  const [highlightedInfo, setHighlightedInfo] = useState<HighlightInfo>(null);
 
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -91,14 +95,14 @@ export default function DashboardClient() {
     }
   }, []);
 
-  const handleHighlight = (item: { type: 'dsc' | 'employee'; id: string } | null) => {
+  const handleHighlight = (info: HighlightInfo) => {
     if (highlightTimeoutRef.current) {
         clearTimeout(highlightTimeoutRef.current);
     }
-    setHighlightedItem(item);
-    if (item) {
+    setHighlightedInfo(info);
+    if (info) {
       highlightTimeoutRef.current = setTimeout(() => {
-        setHighlightedItem(null);
+        setHighlightedInfo(null);
       }, 3000);
     }
   };
@@ -131,7 +135,7 @@ export default function DashboardClient() {
             <TopRightQuadrant 
               dscs={dscsInStorage}
               currentUser={currentUser}
-              highlightedId={highlightedItem?.type === 'dsc' ? highlightedItem.id : null}
+              highlightedInfo={highlightedInfo}
               onDscSelect={(dsc) => handleHighlight({type: 'dsc', id: dsc.location.mainBox.toString()})}
               refetchData={refetchData}
             />
@@ -139,7 +143,7 @@ export default function DashboardClient() {
           <div className="h-full min-h-[300px] lg:min-h-0">
             <BottomLeftQuadrant 
               employees={employees} 
-              highlightedId={highlightedItem?.type === 'employee' ? highlightedItem.id : null}
+              highlightedId={highlightedInfo?.type === 'employee' ? highlightedInfo.id : null}
             />
           </div>
           <div className="h-full min-h-[300px] lg:min-h-0">

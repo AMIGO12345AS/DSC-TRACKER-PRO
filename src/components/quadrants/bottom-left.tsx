@@ -17,13 +17,17 @@ export default function BottomLeftQuadrant({ employees, highlightedId }: BottomL
       <CardContent>
         <ScrollArea className="h-[250px] lg:h-[calc(100%-2rem)]">
           <div className="flex flex-wrap gap-3 pr-4">
-            {employees.map((employee) => (
-              <UserCard
-                key={employee.id}
-                user={employee}
-                isHighlighted={highlightedId === employee.id}
-              />
-            ))}
+            {employees.length > 0 ? (
+              employees.map((employee) => (
+                <UserCard
+                  key={employee.id}
+                  user={employee}
+                  isHighlighted={highlightedId === employee.id}
+                />
+              ))
+            ) : (
+                <p className="w-full text-center text-muted-foreground p-4">No employees found. Add employees via Leader Actions.</p>
+            )}
           </div>
         </ScrollArea>
       </CardContent>

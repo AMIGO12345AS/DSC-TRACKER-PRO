@@ -18,6 +18,7 @@ import { takeDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
+import type { HighlightInfo } from './dashboard-client';
 
 interface SubBoxModalProps {
   isOpen: boolean;
@@ -27,22 +28,38 @@ interface SubBoxModalProps {
   currentUser: User;
   onDscSelect: (dsc: DSC) => void;
   refetchData: () => void;
+  highlightedInfo: HighlightInfo;
 }
 
-export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onDscSelect, refetchData }: SubBoxModalProps) {
+export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onDscSelect, refetchData, highlightedInfo }: SubBoxModalProps) {
   const [selectedDsc, setSelectedDsc] = useState<DSC | null>(null);
   const [selectedSubBox, setSelectedSubBox] = useState<string | null>(null);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // If modal opened via a highlight, set the initial state
+      if (
+        highlightedInfo?.type === 'dsc' &&
+        highlightedInfo.subBoxId &&
+        highlightedInfo.dscId &&
+        parseInt(highlightedInfo.id, 10) === mainBoxId
+      ) {
+        setSelectedSubBox(highlightedInfo.subBoxId);
+        const dscToSelect = dscs.find((d) => d.id === highlightedInfo.dscId);
+        if (dscToSelect) {
+          setSelectedDsc(dscToSelect);
+        }
+      }
+    } else {
+      // Reset state on close with a small delay to prevent visual glitch
       setTimeout(() => {
         setSelectedDsc(null);
         setSelectedSubBox(null);
-      }, 200); 
+      }, 200);
     }
-  }, [isOpen]);
+  }, [isOpen, mainBoxId, highlightedInfo, dscs]);
   
   const handleTakeDsc = async () => {
     if (!selectedDsc || !currentUser) return;
@@ -102,9 +119,9 @@ export function SubBoxModal({ isOpen, onClose, mainBoxId, dscs, currentUser, onD
                   key={id}
                   variant="outline"
                   className={cn(
-                    'h-24 w-full flex-col p-2 text-center',
+                    'h-24 w-full flex-col p-2 text-center transition-all duration-300',
                     count > 0 ? 'bg-accent/20 hover:bg-accent/30' : 'bg-secondary',
-                    selectedSubBox === id && 'ring-2 ring-primary'
+                    selectedSubBox === id && 'ring-4 ring-primary/50 ring-offset-2 ring-offset-background'
                   )}
                   onClick={() => {
                     if (count > 0) {

@@ -26,12 +26,13 @@ import { deleteDscAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { cn } from '@/lib/utils';
+import type { HighlightInfo } from '../dashboard-client';
 
 interface BottomRightQuadrantProps {
   allDscs: DSC[];
   allUsers: User[];
   currentUser: User;
-  onHighlight: (item: { type: 'dsc' | 'employee'; id: string } | null) => void;
+  onHighlight: (info: HighlightInfo) => void;
   refetchData: () => void;
 }
 
@@ -82,7 +83,12 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
     if (dsc.status === 'with-employee' && dsc.user) {
       onHighlight({ type: 'employee', id: dsc.user.id });
     } else {
-      onHighlight({ type: 'dsc', id: dsc.location.mainBox.toString() });
+      onHighlight({
+        type: 'dsc',
+        id: dsc.location.mainBox.toString(),
+        subBoxId: dsc.location.subBox,
+        dscId: dsc.id,
+      });
     }
     setSearchTerm('');
   };
@@ -116,7 +122,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
             />
           </div>
           {searchResults.length > 0 && searchTerm && (
-            <Card className="absolute top-full mt-2 w-full glass-card">
+            <Card className="absolute top-full mt-2 w-full glass-card z-20">
               <ScrollArea className="h-auto max-h-60">
                 <CardContent className="p-2">
                   {searchResults.map((dsc) => (
