@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/hooks/use-user-session';
 import { useAuth } from '@/hooks/use-auth';
@@ -8,7 +9,7 @@ import { getUsersAction, verifyUserPasswordAction } from '@/app/actions';
 import type { User } from '@/types';
 import { UserCard } from '@/components/user-card';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2, Users, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +25,7 @@ export default function SelectUserPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
+    const [searchTerm, setSearchTerm] = useState('');
     const [verifyingUser, setVerifyingUser] = useState<User | null>(null);
     const [password, setPassword] = useState('');
     const [isCheckingPassword, setIsCheckingPassword] = useState(false);
@@ -51,6 +53,13 @@ export default function SelectUserPage() {
             fetchUsers();
         }
     }, [user, toast]);
+
+    const filteredUsers = useMemo(() => {
+        if (!searchTerm) {
+            return users;
+        }
+        return users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }, [users, searchTerm]);
 
     const handleUserSelect = (userToSelect: User) => {
         setPassword('');
@@ -88,7 +97,7 @@ export default function SelectUserPage() {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
-            <Card className="w-full max-w-2xl glass-card">
+            <Card className="w-full max-w-4xl glass-card">
                 <CardHeader className="text-center">
                     <Users className="mx-auto h-10 w-10 text-primary" />
                     <CardTitle className="mt-4 font-headline">Select a User Profile</CardTitle>
@@ -96,19 +105,32 @@ export default function SelectUserPage() {
                         Choose a profile to act as within the dashboard.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="max-h-[60vh] overflow-y-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-1">
-                        {users.length > 0 ? (
-                            users.map((u) => (
-                                <button key={u.id} onClick={() => handleUserSelect(u)} className="w-full text-left">
-                                    <UserCard user={u} />
-                                </button>
-                            ))
-                        ) : (
-                            <p className="text-center text-muted-foreground col-span-2">
-                                No user profiles found. Please add users via the dashboard.
-                            </p>
-                        )}
+                <CardContent className="px-6 pb-6">
+                    <div className="mx-auto mb-4 w-full max-w-md">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                placeholder="Search by user name..."
+                                className="pl-10"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="max-h-[50vh] overflow-y-auto pr-2">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredUsers.length > 0 ? (
+                                filteredUsers.map((u) => (
+                                    <button key={u.id} onClick={() => handleUserSelect(u)} className="w-full text-left">
+                                        <UserCard user={u} />
+                                    </button>
+                                ))
+                            ) : (
+                                <p className="col-span-1 py-10 text-center text-muted-foreground md:col-span-2 lg:col-span-3">
+                                    No user profiles found matching your search.
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -121,7 +143,7 @@ export default function SelectUserPage() {
                             Please enter the password for this user profile to proceed.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4 space-y-2">
+                    <div className="space-y-2 py-4">
                         <Label htmlFor="password">Password</Label>
                         <Input 
                             id="password" 
