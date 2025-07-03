@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -104,6 +103,7 @@ export async function addDscAction(prevState: ActionState, formData: FormData): 
         action: 'ADD_DSC',
         dscSerialNumber: serialNumber,
         dscDescription: description,
+        details: `DSC created and placed in Box ${mainBox}-${subBox.toUpperCase()}.`,
     });
 
   } catch (error) {
@@ -173,6 +173,7 @@ export async function editDscAction(prevState: ActionState, formData: FormData):
         action: 'UPDATE_DSC',
         dscSerialNumber: serialNumber,
         dscDescription: description,
+        details: `DSC details updated. New location: Box ${mainBox}-${subBox.toUpperCase()}.`,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -206,6 +207,16 @@ export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>)
     }
 
     try {
+        const dscRef = doc(db, 'dscs', dscId);
+        const dscDoc = await getDoc(dscRef);
+        let details = 'DSC permanently removed from the system.';
+        if (dscDoc.exists()) {
+            const location = dscDoc.data().location;
+            if (location) {
+                details = `DSC removed from storage at Box ${location.mainBox}-${location.subBox.toUpperCase()}.`;
+            }
+        }
+
         await deleteDscFromDb(dscId);
         await addAuditLog({
           userId: actorId,
@@ -213,6 +224,7 @@ export async function deleteDscAction(payload: z.infer<typeof DeleteDscPayload>)
           action: 'DELETE_DSC',
           dscSerialNumber: serialNumber,
           dscDescription: description,
+          details: details,
         });
     } catch(error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -376,6 +388,15 @@ export async function takeDscAction(payload: z.infer<typeof DscInteractionPayloa
     const { dscId, actorId, actorName, serialNumber, description } = validatedPayload.data;
     
     try {
+        const dscRef = doc(db, 'dscs', dscId);
+        const dscDoc = await getDoc(dscRef);
+        let details = 'DSC taken from storage.';
+        if (dscDoc.exists()) {
+            const location = dscDoc.data().location;
+            if (location) {
+                details = `DSC taken from storage at Box ${location.mainBox}-${location.subBox.toUpperCase()}.`;
+            }
+        }
         await takeDscFromDb(dscId, actorId);
         await addAuditLog({
             userId: actorId,
@@ -383,6 +404,7 @@ export async function takeDscAction(payload: z.infer<typeof DscInteractionPayloa
             action: 'TAKE',
             dscSerialNumber: serialNumber,
             dscDescription: description,
+            details: details,
         });
         revalidatePath('/');
         return { success: true, message: 'DSC taken successfully.' };
@@ -399,6 +421,15 @@ export async function returnDscAction(payload: z.infer<typeof DscInteractionPayl
     }
     const { dscId, actorId, actorName, serialNumber, description } = validatedPayload.data;
     try {
+        const dscRef = doc(db, 'dscs', dscId);
+        const dscDoc = await getDoc(dscRef);
+        let details = 'DSC returned to storage.';
+        if (dscDoc.exists()) {
+            const location = dscDoc.data().location;
+            if (location) {
+                details = `DSC returned to storage at Box ${location.mainBox}-${location.subBox.toUpperCase()}.`;
+            }
+        }
         await returnDscFromDb(dscId, actorId);
         await addAuditLog({
             userId: actorId,
@@ -406,6 +437,7 @@ export async function returnDscAction(payload: z.infer<typeof DscInteractionPayl
             action: 'RETURN',
             dscSerialNumber: serialNumber,
             dscDescription: description,
+            details: details,
         });
         revalidatePath('/');
         return { success: true, message: 'DSC returned successfully.' };
