@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -66,10 +66,26 @@ export function AllDscsDialog({ trigger, allUsers }: AllDscsDialogProps) {
   };
   
   const getStatusBadge = (status: DSC['status']) => {
-      if (status === 'storage') {
-          return <Badge variant="outline">In Storage</Badge>
+      switch (status) {
+          case 'storage':
+              return <Badge variant="outline">In Storage</Badge>;
+          case 'with-employee':
+              return <Badge className="bg-green-600 hover:bg-green-700">With Employee</Badge>;
+          case 'with-client':
+              return <Badge className="bg-purple-600 hover:bg-purple-700">With Client</Badge>;
+          default:
+              return <Badge>Unknown</Badge>;
       }
-      return <Badge className="bg-green-600 hover:bg-green-700">With Employee</Badge>
+  }
+
+  const getHolderName = (dsc: DSC) => {
+      if (dsc.status === 'with-employee' && dsc.currentHolderId) {
+          return userMap.get(dsc.currentHolderId) || 'Unknown User';
+      }
+      if (dsc.status === 'with-client' && dsc.clientName) {
+          return dsc.clientName;
+      }
+      return 'N/A';
   }
 
   return (
@@ -111,7 +127,7 @@ export function AllDscsDialog({ trigger, allUsers }: AllDscsDialogProps) {
                   <TableRow key={dsc.id}>
                     <TableCell className="font-medium">{dsc.description}</TableCell>
                     <TableCell>{dsc.serialNumber}</TableCell>
-                    <TableCell>{dsc.currentHolderId ? userMap.get(dsc.currentHolderId) || 'Unknown' : 'N/A'}</TableCell>
+                    <TableCell>{getHolderName(dsc)}</TableCell>
                     <TableCell>{getStatusBadge(dsc.status)}</TableCell>
                     <TableCell>{format(new Date(dsc.expiryDate), 'dd MMM yyyy')}</TableCell>
                     <TableCell>{getExpiryBadge(dsc.expiryDate)}</TableCell>

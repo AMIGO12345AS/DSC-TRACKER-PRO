@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,10 @@ import { Skeleton } from './ui/skeleton';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Search } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Button } from './ui/button';
 
-const ALL_ACTIONS: AuditLogAction[] = ['TAKE', 'RETURN', 'ADD_DSC', 'UPDATE_DSC', 'DELETE_DSC'];
+const ALL_ACTIONS: AuditLogAction[] = ['TAKE', 'RETURN', 'ADD_DSC', 'UPDATE_DSC', 'DELETE_DSC', 'TAKE_CLIENT', 'RETURN_CLIENT'];
 
 interface AuditLogDialogProps {
   trigger: React.ReactNode;
@@ -68,7 +70,8 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
         searchTerm === '' ||
         log.userName.toLowerCase().includes(lowercasedTerm) ||
         log.dscDescription.toLowerCase().includes(lowercasedTerm) ||
-        log.dscSerialNumber.toLowerCase().includes(lowercasedTerm);
+        log.dscSerialNumber.toLowerCase().includes(lowercasedTerm) ||
+        (log.details && log.details.toLowerCase().includes(lowercasedTerm));
 
       return matchesAction && matchesSearch;
     });
@@ -80,6 +83,10 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
         return <Badge variant="outline" className="text-green-600 border-green-600">Take</Badge>;
       case 'RETURN':
         return <Badge variant="outline" className="text-blue-600 border-blue-600">Return</Badge>;
+      case 'TAKE_CLIENT':
+        return <Badge variant="outline" className="text-purple-600 border-purple-600">Client Take</Badge>;
+      case 'RETURN_CLIENT':
+        return <Badge variant="outline" className="text-purple-600 border-purple-600">Client Return</Badge>;
       case 'ADD_DSC':
         return <Badge variant="secondary">Add</Badge>;
       case 'UPDATE_DSC':
@@ -91,10 +98,14 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
     }
   };
 
+  const formatActionFilterText = (action: string) => {
+      return action.replace('_', ' ').replace('DSC', '').toLowerCase();
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-5xl">
         <DialogHeader>
           <DialogTitle className="font-headline">Audit Log & History</DialogTitle>
           <DialogDescription>
@@ -106,7 +117,7 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
             <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                    placeholder="Search by User, DSC Description or S/N..."
+                    placeholder="Search by User, DSC, Client, or Details..."
                     className="pl-10"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -120,7 +131,7 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
                     <SelectItem value="all">All Actions</SelectItem>
                     {ALL_ACTIONS.map(action => (
                         <SelectItem key={action} value={action} className="capitalize">
-                          {action.replace('_DSC', '').toLowerCase()}
+                          {formatActionFilterText(action)}
                         </SelectItem>
                     ))}
                 </SelectContent>
@@ -129,19 +140,21 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
 
         <ScrollArea className="h-[55vh] border rounded-md">
           <Table>
-            <TableHeader className="sticky top-0 bg-secondary">
+            <TableHeader className="sticky top-0 bg-secondary z-10">
               <TableRow>
                 <TableHead className="w-[180px]">Timestamp</TableHead>
                 <TableHead>User</TableHead>
-                <TableHead className="w-[100px]">Action</TableHead>
+                <TableHead className="w-[120px]">Action</TableHead>
                 <TableHead>DSC Description</TableHead>
                 <TableHead>DSC Serial No.</TableHead>
+                <TableHead>Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
@@ -157,11 +170,23 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
                     <TableCell>{getActionBadge(log.action)}</TableCell>
                     <TableCell>{log.dscDescription}</TableCell>
                     <TableCell>{log.dscSerialNumber}</TableCell>
+                    <TableCell>
+                      {log.details && (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="link" size="sm" className="p-0 h-auto">View</Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80">
+                                <p className="text-sm">{log.details}</p>
+                            </PopoverContent>
+                        </Popover>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
+                  <TableCell colSpan={6} className="text-center h-24">
                     No logs found matching your criteria.
                   </TableCell>
                 </TableRow>

@@ -54,11 +54,25 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
       .filter(dsc => 
         (dsc.serialNumber && dsc.serialNumber.toLowerCase().includes(lowercasedTerm)) || 
         (dsc.description && dsc.description.toLowerCase().includes(lowercasedTerm)) ||
-        (dsc.user && dsc.user.name.toLowerCase().includes(lowercasedTerm))
+        (dsc.user && dsc.user.name.toLowerCase().includes(lowercasedTerm)) ||
+        (dsc.clientName && dsc.clientName.toLowerCase().includes(lowercasedTerm))
       );
     
     return dscResults;
   }, [searchTerm, allDscs, allUsers]);
+
+  const getDscStatusText = (dsc: (typeof searchResults)[0]) => {
+    switch (dsc.status) {
+      case 'storage':
+        return `Box ${dsc.location.mainBox}`;
+      case 'with-employee':
+        return `With ${dsc.user?.name || 'User'}`;
+      case 'with-client':
+        return `With Client: ${dsc.clientName || 'N/A'}`;
+      default:
+        return 'Unknown';
+    }
+  }
 
   const handleDeleteDsc = async (dsc: (typeof searchResults)[0]) => {
     if (!currentUser) return;
@@ -82,7 +96,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
   const handleSelect = (dsc: (typeof searchResults)[0]) => {
     if (dsc.status === 'with-employee' && dsc.user) {
       onHighlight({ type: 'employee', id: dsc.user.id });
-    } else {
+    } else if (dsc.status === 'storage') {
       onHighlight({
         type: 'dsc',
         id: dsc.location.mainBox.toString(),
@@ -90,6 +104,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
         dscId: dsc.id,
       });
     }
+    // No highlight action for 'with-client' status for now, as there's no specific panel to highlight.
     setSearchTerm('');
   };
   
@@ -115,7 +130,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Search by Description, S/N, or User..."
+              placeholder="Search by Description, S/N, User or Client..."
               className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -135,7 +150,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
                       </div>
                       <div className="flex-1 cursor-pointer" onClick={() => handleSelect(dsc)}>
                         <p className="font-semibold">{dsc.description}</p>
-                        <p className="text-sm text-muted-foreground">{dsc.serialNumber} - {dsc.status === 'storage' ? `Box ${dsc.location.mainBox}` : `With ${dsc.user?.name || 'User'}`}</p>
+                        <p className="text-sm text-muted-foreground">{dsc.serialNumber} - {getDscStatusText(dsc)}</p>
                       </div>
                       {currentUser.role === 'leader' && (
                         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -143,7 +158,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
                             dsc={dsc}
                             currentUser={currentUser}
                             trigger={
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" disabled={dsc.status !== 'storage'}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                             }
@@ -161,7 +176,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
                                  </TooltipTrigger>
                                  {dsc.status !== 'storage' && (
                                   <TooltipContent>
-                                    <p>Cannot delete a DSC in use.</p>
+                                    <p>Cannot delete a DSC in use by an employee or client.</p>
                                   </TooltipContent>
                                  )}
                                </Tooltip>
@@ -171,7 +186,7 @@ export default function BottomRightQuadrant({ allDscs, allUsers, currentUser, on
                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                     <AlertDialogDescription>
                                         This action cannot be undone. This will permanently delete the DSC.
-                                        You cannot delete a DSC that is currently in use by an employee.
+                                        You cannot delete a DSC that is currently in use.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>

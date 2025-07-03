@@ -2,7 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs } from '@/services/dsc';
+import { addDsc as addDscToDb, updateDsc as updateDscInDb, deleteDsc as deleteDscFromDb, takeDsc as takeDscFromDb, returnDsc as returnDscFromDb, getDscs, takeDscByClient, returnDscFromClient } from '@/services/dsc';
 import { addUser, updateUser, deleteUser, getUsers, getUserById } from '@/services/user';
 import { addAuditLog, getAuditLogs } from '@/services/auditLog';
 import { revalidatePath } from 'next/cache';
@@ -415,6 +415,86 @@ export async function returnDscAction(payload: z.infer<typeof DscInteractionPayl
     }
 }
 
+// Client Hand Actions
+const TakeDscByClientPayload = z.object({
+  dscId: z.string(),
+  dscSerialNumber: z.string(),
+  dscDescription: z.string(),
+  clientName: z.string().min(1, "Client name is required."),
+  clientDetails: z.string().min(1, "Details are required."),
+  actorId: z.string(),
+  actorName: z.string(),
+});
+
+export async function takeDscByClientAction(payload: z.infer<typeof TakeDscByClientPayload>): Promise<{ success: boolean; message: string; }> {
+    const validatedPayload = TakeDscByClientPayload.safeParse(payload);
+    if (!validatedPayload.success) {
+        return { success: false, message: `Invalid payload: ${validatedPayload.error.flatten().fieldErrors}` };
+    }
+    const { dscId, dscSerialNumber, dscDescription, clientName, clientDetails, actorId, actorName } = validatedPayload.data;
+
+    const roleCheck = await verifyLeaderRole(actorId);
+    if (!roleCheck.isLeader) {
+        return { success: false, message: roleCheck.message ?? "" };
+    }
+
+    try {
+        await takeDscByClient(dscId, clientName, clientDetails);
+        await addAuditLog({
+            userId: actorId,
+            userName: actorName,
+            action: 'TAKE_CLIENT',
+            dscSerialNumber,
+            dscDescription,
+            details: `Client: ${clientName}, Details: ${clientDetails}`
+        });
+        revalidatePath('/');
+        return { success: true, message: `DSC assigned to ${clientName} successfully.` };
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Database Error: ${errorMessage}.` };
+    }
+}
+
+const ReturnDscFromClientPayload = z.object({
+  dscId: z.string(),
+  dscSerialNumber: z.string(),
+  dscDescription: z.string(),
+  returnNotes: z.string().optional(),
+  actorId: z.string(),
+  actorName: z.string(),
+});
+
+export async function returnDscFromClientAction(payload: z.infer<typeof ReturnDscFromClientPayload>): Promise<{ success: boolean; message: string; }> {
+    const validatedPayload = ReturnDscFromClientPayload.safeParse(payload);
+    if (!validatedPayload.success) {
+        return { success: false, message: 'Invalid payload for return action.' };
+    }
+    const { dscId, dscSerialNumber, dscDescription, returnNotes, actorId, actorName } = validatedPayload.data;
+
+    const roleCheck = await verifyLeaderRole(actorId);
+    if (!roleCheck.isLeader) {
+        return { success: false, message: roleCheck.message ?? "" };
+    }
+
+    try {
+        await returnDscFromClient(dscId);
+        await addAuditLog({
+            userId: actorId,
+            userName: actorName,
+            action: 'RETURN_CLIENT',
+            dscSerialNumber,
+            dscDescription,
+            details: returnNotes ? `Return notes: ${returnNotes}` : 'Returned from client.'
+        });
+        revalidatePath('/');
+        return { success: true, message: 'DSC returned from client successfully.' };
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Database Error: ${errorMessage}.` };
+    }
+}
+
 
 // Action to get audit logs
 export async function getAuditLogsAction(): Promise<{ logs?: any[]; error?: string; }> {
@@ -497,12 +577,14 @@ const ImportedJsonDataSchema = z.object({
     serialNumber: z.string(),
     description: z.string(),
     expiryDate: z.any(), // Can be string or have toDate method
-    status: z.enum(['storage', 'with-employee']),
+    status: z.enum(['storage', 'with-employee', 'with-client']),
     location: z.object({
       mainBox: z.number(),
       subBox: z.string(),
     }),
     currentHolderId: z.string().nullable().optional(),
+    clientName: z.string().nullable().optional(),
+    clientDetails: z.string().nullable().optional(),
   })),
 });
 

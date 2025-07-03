@@ -57,6 +57,8 @@ export async function addDsc(dscData: AddDscData) {
         expiryDate: Timestamp.fromDate(new Date(dscData.expiryDate)),
         status: 'storage' as const,
         currentHolderId: null,
+        clientName: null,
+        clientDetails: null,
     };
 
     const docRef = await addDoc(dscsCol, newDsc);
@@ -98,8 +100,8 @@ export async function deleteDsc(dscId: string) {
         }
         const dscData = dscDoc.data();
 
-        if (dscData.status === 'with-employee') {
-            throw new Error("Cannot delete a DSC that is currently held by an employee.");
+        if (dscData.status !== 'storage') {
+            throw new Error("Cannot delete a DSC that is currently held by an employee or client.");
         }
         
         transaction.delete(dscRef);
@@ -160,5 +162,38 @@ export async function returnDsc(dscId: string, userId: string) {
             currentHolderId: null
         });
         transaction.update(userRef, { hasDsc: false });
+    });
+}
+
+export async function takeDscByClient(dscId: string, clientName: string, clientDetails: string) {
+    const dscRef = doc(db, 'dscs', dscId);
+    
+    await runTransaction(db, async (transaction) => {
+        const dscDoc = await transaction.get(dscRef);
+        if (!dscDoc.exists()) throw new Error("DSC does not exist!");
+        if (dscDoc.data().status !== 'storage') throw new Error("DSC is not available in storage.");
+
+        transaction.update(dscRef, {
+            status: 'with-client',
+            currentHolderId: null,
+            clientName: clientName,
+            clientDetails: clientDetails
+        });
+    });
+}
+
+export async function returnDscFromClient(dscId: string) {
+    const dscRef = doc(db, 'dscs', dscId);
+
+    await runTransaction(db, async (transaction) => {
+        const dscDoc = await transaction.get(dscRef);
+        if (!dscDoc.exists()) throw new Error("DSC does not exist!");
+        if (dscDoc.data().status !== 'with-client') throw new Error("DSC is not currently with a client.");
+
+        transaction.update(dscRef, {
+            status: 'storage',
+            clientName: null,
+            clientDetails: null
+        });
     });
 }

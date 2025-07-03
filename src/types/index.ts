@@ -11,15 +11,17 @@ export interface DSC {
   serialNumber: string;
   description: string;
   expiryDate: string; // ISO string
-  status: 'storage' | 'with-employee';
+  status: 'storage' | 'with-employee' | 'with-client';
   location: {
     mainBox: number;
     subBox: string; // 'a' through 'i'
   };
-  currentHolderId?: string; // This is the Firestore document ID of the user
+  currentHolderId?: string | null; // This is the Firestore document ID of the user
+  clientName?: string | null;
+  clientDetails?: string | null;
 }
 
-export type AuditLogAction = 'TAKE' | 'RETURN' | 'ADD_DSC' | 'UPDATE_DSC' | 'DELETE_DSC';
+export type AuditLogAction = 'TAKE' | 'RETURN' | 'ADD_DSC' | 'UPDATE_DSC' | 'DELETE_DSC' | 'TAKE_CLIENT' | 'RETURN_CLIENT';
 
 export interface AuditLog {
   id: string;
@@ -29,4 +31,5 @@ export interface AuditLog {
   action: AuditLogAction;
   dscSerialNumber: string;
   dscDescription: string;
+  details?: string;
 }

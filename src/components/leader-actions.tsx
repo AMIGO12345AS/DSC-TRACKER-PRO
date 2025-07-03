@@ -9,7 +9,8 @@ import { AuditLogDialog } from './audit-log-dialog';
 import { AllDscsDialog } from './all-dscs-dialog';
 import { ImportDataDialog } from './import-data-dialog';
 import { ExportDataDialog } from './export-data-dialog';
-import { Upload, Download, UserPlus, FileClock, List, FilePlus2 } from 'lucide-react';
+import { Upload, Download, UserPlus, FileClock, List, FilePlus2, Handshake } from 'lucide-react';
+import { InClientsHandDialog } from './in-clients-hand-dialog';
 
 export function LeaderActions({ allUsers, currentUser, refetchData }: { allUsers: User[], currentUser: User, refetchData: () => void }) {
 
@@ -30,6 +31,12 @@ export function LeaderActions({ allUsers, currentUser, refetchData }: { allUsers
         onSuccess={refetchData}
       />
       
+       <InClientsHandDialog
+        trigger={<Button variant="secondary" className="w-full"><Handshake className="mr-2" /> In Client's Hand</Button>}
+        currentUser={currentUser}
+        onSuccess={refetchData}
+      />
+
       <AuditLogDialog 
          trigger={<Button variant="secondary" className="w-full"><FileClock className="mr-2"/> Audit Log</Button>}
       />
