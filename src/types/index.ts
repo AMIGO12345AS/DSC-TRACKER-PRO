@@ -19,12 +19,14 @@ export interface DSC {
   currentHolderId?: string; // This is the Firestore document ID of the user
 }
 
+export type AuditLogAction = 'TAKE' | 'RETURN' | 'ADD_DSC' | 'UPDATE_DSC' | 'DELETE_DSC';
+
 export interface AuditLog {
   id: string;
   timestamp: string; // ISO string
   userId: string;
   userName: string;
-  action: 'TAKE' | 'RETURN' | 'ADD_DSC' | 'UPDATE_DSC' | 'DELETE_DSC';
+  action: AuditLogAction;
   dscSerialNumber: string;
   dscDescription: string;
 }

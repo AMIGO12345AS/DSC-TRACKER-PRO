@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +15,14 @@ import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { getAuditLogsAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import type { AuditLog } from '@/types';
+import type { AuditLog, AuditLogAction } from '@/types';
 import { format } from 'date-fns';
 import { Skeleton } from './ui/skeleton';
-import { cn } from '@/lib/utils';
+import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Search } from 'lucide-react';
+
+const ALL_ACTIONS: AuditLogAction[] = ['TAKE', 'RETURN', 'ADD_DSC', 'UPDATE_DSC', 'DELETE_DSC'];
 
 interface AuditLogDialogProps {
   trigger: React.ReactNode;
@@ -29,6 +33,9 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [actionFilter, setActionFilter] = useState('all');
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
@@ -45,8 +52,27 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
         });
       }
       setIsLoading(false);
+    } else {
+      setSearchTerm('');
+      setActionFilter('all');
     }
   };
+
+  const filteredLogs = useMemo(() => {
+    const lowercasedTerm = searchTerm.toLowerCase();
+
+    return logs.filter(log => {
+      const matchesAction = actionFilter === 'all' || log.action === actionFilter;
+
+      const matchesSearch =
+        searchTerm === '' ||
+        log.userName.toLowerCase().includes(lowercasedTerm) ||
+        log.dscDescription.toLowerCase().includes(lowercasedTerm) ||
+        log.dscSerialNumber.toLowerCase().includes(lowercasedTerm);
+
+      return matchesAction && matchesSearch;
+    });
+  }, [logs, searchTerm, actionFilter]);
 
   const getActionBadge = (action: AuditLog['action']) => {
     switch (action) {
@@ -75,9 +101,35 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
             A complete history of all DSC movements and management actions.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="h-[60vh]">
+
+        <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                    placeholder="Search by User, DSC Description or S/N..."
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <Select value={actionFilter} onValueChange={setActionFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by action" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Actions</SelectItem>
+                    {ALL_ACTIONS.map(action => (
+                        <SelectItem key={action} value={action} className="capitalize">
+                          {action.replace('_DSC', '').toLowerCase()}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+
+        <ScrollArea className="h-[55vh] border rounded-md">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-secondary">
               <TableRow>
                 <TableHead className="w-[180px]">Timestamp</TableHead>
                 <TableHead>User</TableHead>
@@ -97,8 +149,8 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                   </TableRow>
                 ))
-              ) : logs.length > 0 ? (
-                logs.map((log) => (
+              ) : filteredLogs.length > 0 ? (
+                filteredLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell>{format(new Date(log.timestamp), 'dd MMM yyyy, hh:mm a')}</TableCell>
                     <TableCell>{log.userName}</TableCell>
@@ -110,7 +162,7 @@ export function AuditLogDialog({ trigger }: AuditLogDialogProps) {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center h-24">
-                    No audit logs found.
+                    No logs found matching your criteria.
                   </TableCell>
                 </TableRow>
               )}
